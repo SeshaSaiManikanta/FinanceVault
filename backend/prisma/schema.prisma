@@ -1,0 +1,411 @@
+// VaultFinance Database Schema
+// © 2025 VaultFinance. All Rights Reserved.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────
+// USERS (Finance shop owners / admin)
+// ─────────────────────────────────────────────
+model User {
+  id              String    @id @default(cuid())
+  email           String    @unique
+  passwordHash    String
+  name            String
+  companyName     String
+  phone           String?
+  role            UserRole  @default(USER)
+  
+  // Security
+  securityPinHash String?   // bcrypt hash of 4-digit PIN
+  failedLoginCount Int      @default(0)
+  lockedUntil     DateTime?
+  lastLoginAt     DateTime?
+  lastLoginIp     String?
+  
+  // Subscription
+  plan            PlanType  @default(TRIAL)
+  trialStartedAt  DateTime  @default(now())
+  trialEndsAt     DateTime?
+  subscriptionId  String?
+  subscribedAt    DateTime?
+  subscriptionEndsAt DateTime?
+  
+  // Alert preferences (stored as JSON)
+  alertPrefs      Json      @default("{\"emiDue\":{\"email\":true,\"sms\":true},\"payment\":{\"email\":true,\"sms\":false},\"overdue\":{\"email\":true,\"sms\":true},\"kyc\":{\"email\":false,\"sms\":true}}")
+  
+  // Flags
+  isActive        Boolean   @default(true)
+  emailVerified   Boolean   @default(false)
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  // Relations
+  customers       Customer[]
+  loans           Loan[]
+  applications    LoanApplication[]
+  auditLogs       AuditLog[]
+  notifications   Notification[]
+  refreshTokens   RefreshToken[]
+  
+  @@index([email])
+  @@index([role])
+}
+
+// ─────────────────────────────────────────────
+// REFRESH TOKENS (for JWT rotation)
+// ─────────────────────────────────────────────
+model RefreshToken {
+  id          String   @id @default(cuid())
+  token       String   @unique
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt   DateTime
+  isRevoked   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  ipAddress   String?
+  userAgent   String?
+  
+  @@index([userId])
+  @@index([token])
+}
+
+// ─────────────────────────────────────────────
+// CUSTOMERS (End-customers of finance users)
+// ─────────────────────────────────────────────
+model Customer {
+  id              String          @id @default(cuid())
+  userId          String          // owner (finance shop user)
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Basic info
+  name            String
+  phone           String
+  email           String?
+  address         String?
+  customerType    CustomerType    @default(INDIVIDUAL)
+  
+  // Sensitive - AES-256-GCM encrypted at application layer
+  aadhaarEncrypted String?        // encrypted Aadhaar
+  panEncrypted     String?        // encrypted PAN
+  aadhaarIv        String?        // IV for AES
+  panIv            String?        // IV for AES
+  
+  // KYC
+  kycStatus       KYCStatus       @default(PENDING)
+  kycVerifiedAt   DateTime?
+  kycVerifiedBy   String?         // userId who verified
+  
+  isActive        Boolean         @default(true)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  
+  // Relations
+  loans           Loan[]
+  applications    LoanApplication[]
+  
+  @@index([userId])
+  @@index([phone])
+  @@index([kycStatus])
+}
+
+// ─────────────────────────────────────────────
+// LOAN TYPES (Extensible product registry)
+// ─────────────────────────────────────────────
+model LoanType {
+  id              String   @id @default(cuid())
+  name            String   @unique  // Gold, Vehicle, Personal, etc.
+  slug            String   @unique  // gold, vehicle, personal
+  icon            String            // emoji or icon name
+  color           String            // hex color
+  description     String?
+  
+  // Rate config
+  minRate         Float
+  maxRate         Float
+  defaultRate     Float
+  
+  // Asset fields schema (stored as JSON array)
+  assetFields     Json     @default("[]")
+  
+  // Tenure options (in months)
+  tenureOptions   Json     @default("[6,12,24,36,48,60]")
+  
+  isEnabled       Boolean  @default(true)
+  sortOrder       Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  loans           Loan[]
+  applications    LoanApplication[]
+  
+  @@index([slug])
+  @@index([isEnabled])
+}
+
+// ─────────────────────────────────────────────
+// LOAN APPLICATIONS (Pending approval)
+// ─────────────────────────────────────────────
+model LoanApplication {
+  id              String             @id @default(cuid())
+  applicationNo   String             @unique @default(cuid())
+  
+  userId          String
+  user            User               @relation(fields: [userId], references: [id])
+  customerId      String
+  customer        Customer           @relation(fields: [customerId], references: [id])
+  loanTypeId      String
+  loanType        LoanType           @relation(fields: [loanTypeId], references: [id])
+  
+  // Loan terms
+  principalAmount Float
+  interestRate    Float
+  tenureMonths    Int
+  processingFee   Float              @default(0)
+  
+  // Asset details (JSON - structure depends on loan type)
+  assetDetails    Json               @default("{}")
+  
+  // Approval workflow
+  stage           ApplicationStage   @default(KYC_CHECK)
+  status          ApplicationStatus  @default(PENDING)
+  reviewedBy      String?
+  reviewedAt      DateTime?
+  rejectionReason String?
+  
+  // Computed EMI (stored for reference)
+  emiAmount       Float?
+  
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  
+  loan            Loan?              // Created when approved
+  
+  @@index([userId])
+  @@index([customerId])
+  @@index([status])
+}
+
+// ─────────────────────────────────────────────
+// LOANS (Active/Closed loans)
+// ─────────────────────────────────────────────
+model Loan {
+  id              String       @id @default(cuid())
+  loanNumber      String       @unique  // e.g. GL0041
+  
+  userId          String
+  user            User         @relation(fields: [userId], references: [id])
+  customerId      String
+  customer        Customer     @relation(fields: [customerId], references: [id])
+  loanTypeId      String
+  loanType        LoanType     @relation(fields: [loanTypeId], references: [id])
+  applicationId   String?      @unique
+  application     LoanApplication? @relation(fields: [applicationId], references: [id])
+  
+  // Loan terms
+  principalAmount Float
+  interestRate    Float
+  tenureMonths    Int
+  processingFee   Float        @default(0)
+  disbursedAt     DateTime     @default(now())
+  
+  // Computed
+  emiAmount       Float
+  
+  // Asset details
+  assetDetails    Json         @default("{}")
+  
+  // Status
+  status          LoanStatus   @default(ACTIVE)
+  closedAt        DateTime?
+  closureReason   String?
+  
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  
+  // Relations
+  repayments      Repayment[]
+  
+  @@index([userId])
+  @@index([customerId])
+  @@index([status])
+  @@index([loanNumber])
+}
+
+// ─────────────────────────────────────────────
+// REPAYMENTS (EMI payment records)
+// ─────────────────────────────────────────────
+model Repayment {
+  id              String           @id @default(cuid())
+  loanId          String
+  loan            Loan             @relation(fields: [loanId], references: [id], onDelete: Cascade)
+  
+  installmentNo   Int              // 1, 2, 3...
+  principalAmount Float
+  interestAmount  Float
+  totalAmount     Float
+  
+  dueDate         DateTime
+  paidAt          DateTime?
+  
+  status          RepaymentStatus  @default(PENDING)
+  paymentMethod   String?          // cash, UPI, bank transfer
+  receiptNo       String?
+  remarks         String?
+  
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  
+  @@unique([loanId, installmentNo])
+  @@index([loanId])
+  @@index([dueDate])
+  @@index([status])
+}
+
+// ─────────────────────────────────────────────
+// AUDIT LOGS (Every sensitive action)
+// ─────────────────────────────────────────────
+model AuditLog {
+  id          String          @id @default(cuid())
+  userId      String
+  user        User            @relation(fields: [userId], references: [id])
+  
+  action      String          // LOGIN, VIEW_AADHAAR, DISBURSE_LOAN, etc.
+  entityType  String?         // Customer, Loan, Application
+  entityId    String?
+  details     String?
+  severity    AuditSeverity   @default(LOW)
+  
+  ipAddress   String?
+  userAgent   String?
+  
+  createdAt   DateTime        @default(now())
+  
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+}
+
+// ─────────────────────────────────────────────
+// NOTIFICATIONS (In-app + email/SMS history)
+// ─────────────────────────────────────────────
+model Notification {
+  id          String               @id @default(cuid())
+  userId      String
+  user        User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  type        NotificationType
+  channel     NotificationChannel
+  title       String
+  message     String
+  recipient   String?              // customer name or phone
+  
+  isRead      Boolean              @default(false)
+  sentAt      DateTime?
+  status      NotificationStatus   @default(PENDING)
+  
+  // Reference
+  relatedEntityType String?
+  relatedEntityId   String?
+  
+  createdAt   DateTime             @default(now())
+  
+  @@index([userId])
+  @@index([isRead])
+  @@index([createdAt])
+}
+
+// ─────────────────────────────────────────────
+// ENUMS
+// ─────────────────────────────────────────────
+enum UserRole {
+  ADMIN
+  USER
+}
+
+enum PlanType {
+  TRIAL
+  MONTHLY
+  YEARLY
+  ENTERPRISE
+}
+
+enum CustomerType {
+  INDIVIDUAL
+  BUSINESS
+}
+
+enum KYCStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+enum ApplicationStage {
+  KYC_CHECK
+  DOC_VERIFICATION
+  ASSET_VALUATION
+  CREDIT_ASSESSMENT
+  MANAGER_APPROVAL
+}
+
+enum ApplicationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum LoanStatus {
+  ACTIVE
+  OVERDUE
+  CLOSED
+  NPA
+}
+
+enum RepaymentStatus {
+  PENDING
+  PAID
+  OVERDUE
+  WAIVED
+}
+
+enum AuditSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum NotificationType {
+  EMI_DUE
+  EMI_OVERDUE
+  PAYMENT_RECEIVED
+  KYC_APPROVED
+  KYC_REJECTED
+  LOAN_APPROVED
+  LOAN_DISBURSED
+  SUBSCRIPTION_EXPIRING
+  SECURITY_ALERT
+  SYSTEM
+}
+
+enum NotificationChannel {
+  IN_APP
+  EMAIL
+  SMS
+  WHATSAPP
+}
+
+enum NotificationStatus {
+  PENDING
+  SENT
+  DELIVERED
+  FAILED
+}

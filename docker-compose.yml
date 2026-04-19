@@ -1,0 +1,61 @@
+# VaultFinance — Docker Compose (Local Development)
+# © 2025 VaultFinance. All Rights Reserved.
+# Run: docker-compose up -d
+
+version: '3.8'
+
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: vaultfinance-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: vaultfinance-api
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      NODE_ENV: development
+      PORT: 5000
+      DATABASE_URL: postgresql://postgres.jwetaftdmadrmxfhfrpv:N0FRj65Vj%40Let@aws-1-ap-south-1.pooler.supabase.com:5432/postgres
+      JWT_ACCESS_SECRET: dev_access_secret_change_in_production_min_64_chars_xxxxxxxxxxxxxxxx
+      JWT_REFRESH_SECRET: dev_refresh_secret_change_in_production_min_64_chars_xxxxxxxxxxxxxxx
+      ENCRYPTION_KEY: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+      COOKIE_SECRET: dev_cookie_secret_change_in_production
+      CLIENT_URL: http://localhost:3000
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: vaultfinance-web
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:5000/api
+    depends_on:
+      - backend
+
+volumes: {}
+
+networks:
+  default:
+    name: vaultfinance-network
+    driver: bridge
+    driver_opts:
+      com.docker.network.driver.mtu: 1500
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
