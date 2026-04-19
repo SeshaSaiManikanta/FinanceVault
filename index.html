@@ -1,0 +1,1545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VaultFinance — Gold & Vehicle Loan Manager</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --gold:#B8860B;--gold-light:#FAEEDA;--gold-dark:#7a5a07;
+  --amber:#BA7517;--amber-hover:#854F0B;
+  --blue:#185FA5;--red:#A32D2D;--green:#3B6D11;
+  --bg:#f7f5f0;--surface:#fff;--border:#e5e2d8;
+  --text:#1a1813;--muted:#7a7468;--hint:#b0a898;
+}
+body{font-family:'DM Sans',sans-serif;color:var(--text);background:var(--bg);font-size:14px}
+
+/* ===================== AUTH SCREENS ===================== */
+.auth-shell{min-height:100vh;display:flex;background:var(--bg)}
+.auth-panel{display:none}
+.auth-panel.active{display:flex;width:100%;min-height:100vh}
+
+.auth-left{width:420px;min-width:420px;background:var(--text);display:flex;flex-direction:column;padding:40px;position:relative;overflow:hidden}
+.auth-left-bg{position:absolute;inset:0;opacity:.06;background-image:repeating-linear-gradient(45deg,#fff 0,#fff 1px,transparent 0,transparent 50%);background-size:14px 14px}
+.auth-logo{display:flex;align-items:center;gap:10px;margin-bottom:auto;position:relative}
+.auth-logo-icon{width:36px;height:36px;background:var(--gold);border-radius:10px;display:flex;align-items:center;justify-content:center}
+.auth-logo-name{font-family:'DM Serif Display',serif;font-size:22px;color:#fff;letter-spacing:.3px}
+.auth-left-content{position:relative;margin-top:auto;padding-bottom:20px}
+.auth-left-title{font-family:'DM Serif Display',serif;font-size:32px;color:#fff;line-height:1.2;margin-bottom:12px}
+.auth-left-sub{font-size:13px;color:rgba(255,255,255,.55);line-height:1.7}
+.auth-features{margin-top:28px;display:flex;flex-direction:column;gap:10px}
+.auth-feat{display:flex;align-items:center;gap:10px;font-size:12px;color:rgba(255,255,255,.65)}
+.auth-feat-dot{width:6px;height:6px;border-radius:50%;background:var(--gold);flex-shrink:0}
+
+.auth-right{flex:1;display:flex;align-items:center;justify-content:center;padding:40px}
+.auth-box{width:100%;max-width:400px}
+.auth-title{font-family:'DM Serif Display',serif;font-size:26px;margin-bottom:4px}
+.auth-sub{font-size:13px;color:var(--muted);margin-bottom:28px}
+.auth-form{display:flex;flex-direction:column;gap:14px}
+.fg{display:flex;flex-direction:column;gap:5px}
+.fl{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.fi{padding:10px 12px;border:1.5px solid var(--border);border-radius:9px;font-size:13px;background:var(--surface);color:var(--text);font-family:'DM Sans',sans-serif;transition:border-color .15s}
+.fi:focus{outline:none;border-color:var(--amber)}
+.fi-2col{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.btn-auth{padding:11px;border-radius:9px;border:none;font-size:14px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s;width:100%}
+.btn-auth-primary{background:var(--text);color:#fff}
+.btn-auth-primary:hover{background:#2d2a24}
+.auth-divider{text-align:center;font-size:12px;color:var(--hint);margin:4px 0}
+.auth-link{color:var(--amber);cursor:pointer;font-weight:600}
+.auth-link:hover{text-decoration:underline}
+.auth-err{background:#FCEBEB;border:1px solid #F09595;color:#791F1F;border-radius:8px;padding:9px 12px;font-size:12px;display:none}
+.auth-err.show{display:block}
+.auth-ok{background:#EAF3DE;border:1px solid #C0DD97;color:#27500A;border-radius:8px;padding:9px 12px;font-size:12px;display:none}
+.auth-ok.show{display:block}
+
+/* Plan selector */
+.plan-cards{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:4px}
+.plan-card{border:1.5px solid var(--border);border-radius:10px;padding:12px;cursor:pointer;transition:all .15s;text-align:center}
+.plan-card:hover{border-color:var(--amber)}
+.plan-card.selected{border-color:var(--amber);background:var(--gold-light)}
+.plan-card-name{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}
+.plan-card-price{font-size:16px;font-weight:600;color:var(--text)}
+.plan-card-note{font-size:10px;color:var(--muted);margin-top:2px}
+.plan-badge{display:inline-block;background:#EAF3DE;color:#27500A;font-size:10px;font-weight:600;padding:1px 6px;border-radius:10px;margin-top:4px}
+
+/* ===================== SUBSCRIPTION MODAL ===================== */
+.sub-modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:500;align-items:center;justify-content:center}
+.sub-modal-overlay.open{display:flex}
+.sub-modal{background:var(--surface);border-radius:16px;width:500px;max-width:95vw;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.2)}
+.sub-modal-head{background:var(--text);padding:24px;text-align:center}
+.sub-modal-title{font-family:'DM Serif Display',serif;font-size:22px;color:#fff;margin-bottom:4px}
+.sub-modal-sub{font-size:12px;color:rgba(255,255,255,.55)}
+.sub-modal-body{padding:24px}
+.sub-plans{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
+.sub-plan{border:1.5px solid var(--border);border-radius:12px;padding:16px;cursor:pointer;transition:all .15s}
+.sub-plan:hover{border-color:var(--amber)}
+.sub-plan.active{border-color:var(--amber);background:var(--gold-light)}
+.sub-plan-name{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
+.sub-plan-price{font-size:24px;font-weight:600;margin-bottom:2px}
+.sub-plan-note{font-size:11px;color:var(--muted)}
+.sub-features{margin-bottom:16px}
+.sub-feat{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);padding:4px 0}
+.sub-feat-icon{width:16px;height:16px;border-radius:50%;background:#EAF3DE;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.sub-modal-foot{padding:0 24px 24px;display:flex;flex-direction:column;gap:8px}
+
+/* ===================== TRIAL BANNER ===================== */
+.trial-banner{background:linear-gradient(90deg,#1a1813,#3d3428);padding:8px 20px;display:flex;align-items:center;justify-content:space-between}
+.trial-text{font-size:12px;color:rgba(255,255,255,.8)}
+.trial-text strong{color:#FAC775}
+.trial-upgrade-btn{padding:5px 12px;background:var(--gold);color:var(--text);border:none;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif}
+.trial-upgrade-btn:hover{background:#d4a017}
+.expired-overlay{display:none;position:fixed;inset:0;background:rgba(15,12,8,.85);z-index:400;align-items:center;justify-content:center}
+.expired-overlay.show{display:flex}
+.expired-box{background:var(--surface);border-radius:16px;padding:36px;text-align:center;max-width:400px;width:90%}
+.expired-icon{width:56px;height:56px;background:#FCEBEB;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px}
+
+/* ===================== APP SHELL ===================== */
+.app-shell{display:none;flex-direction:column;height:100vh}
+.app-shell.active{display:flex}
+.app-body{display:flex;flex:1;overflow:hidden}
+.sidebar{width:214px;min-width:214px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column}
+.sidebar-logo{padding:16px 16px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:9px}
+.sidebar-logo-icon{width:28px;height:28px;background:var(--gold);border-radius:7px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.sidebar-logo-text{font-family:'DM Serif Display',serif;font-size:15px}
+.sidebar-user{padding:10px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:9px}
+.sidebar-av{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;flex-shrink:0;background:#FAEEDA;color:#633806}
+.sidebar-user-name{font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sidebar-user-role{font-size:10px;color:var(--muted)}
+.sidebar-logout{margin-left:auto;background:none;border:none;cursor:pointer;color:var(--muted);font-size:11px;padding:2px 6px;border-radius:4px}
+.sidebar-logout:hover{background:var(--bg);color:var(--text)}
+.nav-group{padding:8px 0}
+.nav-label{font-size:10px;font-weight:600;color:var(--hint);letter-spacing:.07em;text-transform:uppercase;padding:6px 14px 3px}
+.nav-item{display:flex;align-items:center;gap:9px;padding:7px 14px;font-size:13px;cursor:pointer;color:var(--muted);border-left:2px solid transparent;transition:all .12s;user-select:none}
+.nav-item:hover{background:var(--gold-light);color:var(--text)}
+.nav-item.active{color:var(--amber-hover);background:var(--gold-light);border-left-color:var(--amber);font-weight:600}
+.nav-badge{margin-left:auto;background:#E24B4A;color:#fff;font-size:10px;border-radius:10px;padding:1px 6px;font-weight:600}
+.nb-amber{background:var(--amber);color:#fff}
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:11px 20px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.topbar-title{font-size:15px;font-weight:600}
+.topbar-sub{font-size:11px;color:var(--muted);margin-top:1px}
+.topbar-right{display:flex;align-items:center;gap:8px}
+.scroll-area{flex:1;overflow-y:auto;padding:18px 20px}
+.page{display:none}.page.active{display:block}
+
+/* ===================== KPI / CARDS ===================== */
+.kpi-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:14px}
+.kpi-grid-3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:14px}
+.kpi{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:13px 15px;position:relative;overflow:hidden}
+.kpi-label{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px}
+.kpi-value{font-size:21px;font-weight:600;line-height:1}
+.kpi-footer{font-size:11px;color:var(--muted);margin-top:4px}
+.kpi-up{color:var(--green)}
+.kpi-down{color:var(--red)}
+.kpi-accent{position:absolute;right:12px;top:12px;width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:15px}
+.card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:11px}
+.card-title{font-size:13px;font-weight:600}
+.card-link{font-size:12px;color:var(--amber);cursor:pointer}
+.card-link:hover{text-decoration:underline}
+.two-col{display:grid;grid-template-columns:1.3fr 1fr;gap:12px;margin-bottom:12px}
+.equal-col{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+
+/* ===================== TABLES ===================== */
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;padding:0 8px 8px;font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;white-space:nowrap}
+td{padding:8px;border-top:1px solid #f0ede5;vertical-align:middle}
+tr:hover td{background:#fdf9f2}
+th:first-child,td:first-child{padding-left:14px}
+th:last-child,td:last-child{padding-right:14px}
+
+/* ===================== BADGES ===================== */
+.badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap}
+.b-active{background:#EAF3DE;color:#27500A}
+.b-overdue{background:#FCEBEB;color:#791F1F}
+.b-closed{background:#f0ede6;color:#555}
+.b-pending{background:#FAEEDA;color:#633806}
+.b-gold{background:#FAC775;color:#412402}
+.b-vehicle{background:#B5D4F4;color:#042C53}
+.b-trial{background:#EAF3DE;color:#27500A}
+.b-subscribed{background:#B5D4F4;color:#042C53}
+.b-expired{background:#FCEBEB;color:#791F1F}
+.b-free{background:#f0ede6;color:#555}
+.b-admin{background:#CECBF6;color:#26215C}
+
+/* ===================== MISC UI ===================== */
+.btn{padding:7px 13px;font-size:12px;border-radius:8px;border:1px solid var(--border);cursor:pointer;background:transparent;color:var(--text);font-family:'DM Sans',sans-serif;transition:all .12s;font-weight:500}
+.btn:hover{background:var(--bg)}
+.btn-amber{background:var(--amber);color:#fff;border-color:var(--amber)}
+.btn-amber:hover{background:var(--amber-hover)}
+.btn-sm{padding:4px 10px;font-size:12px}
+.btn-green{background:var(--green);color:#fff;border-color:var(--green)}
+.btn-red{background:var(--red);color:#fff;border-color:var(--red)}
+.btn-dark{background:var(--text);color:#fff;border-color:var(--text)}
+.btn-dark:hover{background:#2d2a24}
+.av{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;flex-shrink:0}
+.av-cell{display:flex;align-items:center;gap:8px}
+.av-name{font-weight:600}
+.av-sub{font-size:11px;color:var(--muted)}
+.prog-bg{background:var(--bg);border-radius:4px;height:4px;width:100%}
+.prog-fill{height:4px;border-radius:4px;background:var(--amber)}
+.prog-red{background:#E24B4A}
+.alert{border-radius:9px;padding:10px 14px;font-size:13px;display:flex;align-items:center;gap:9px;margin-bottom:12px}
+.alert-amber{background:#FAEEDA;border:1px solid #FAC775;color:#633806}
+.alert-red{background:#FCEBEB;border:1px solid #F09595;color:#791F1F}
+.alert-green{background:#EAF3DE;border:1px solid #C0DD97;color:#27500A}
+.due-row{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f0ede5;font-size:13px}
+.due-row:last-child{border-bottom:none}
+.search-input{padding:7px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;width:190px}
+.search-input:focus{outline:none;border-color:var(--amber);background:var(--surface)}
+.filter-row{display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+.fsel{padding:7px 10px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif}
+.fsel:focus{outline:none;border-color:var(--amber)}
+
+/* ===================== MODALS ===================== */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:300;align-items:center;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal{background:var(--surface);border-radius:14px;border:1px solid var(--border);width:600px;max-width:95vw;max-height:88vh;overflow-y:auto;box-shadow:0 12px 48px rgba(0,0,0,.18)}
+.modal-sm{max-width:420px}
+.modal-head{padding:16px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--surface);z-index:1}
+.modal-title{font-size:14px;font-weight:600}
+.modal-x{background:none;border:none;font-size:22px;cursor:pointer;color:var(--muted);font-family:'DM Sans',sans-serif;line-height:1}
+.modal-x:hover{color:var(--text)}
+.modal-body{padding:18px}
+.modal-foot{padding:12px 18px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px}
+.fs-title{font-size:13px;font-weight:600;margin-bottom:10px;padding-bottom:7px;border-bottom:1px solid var(--border)}
+.form-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.emi-preview{background:var(--gold-light);border-radius:9px;padding:12px;margin-bottom:12px;display:none;border:1px solid #FAC775}
+.emi-p-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.emi-p-label{font-size:10px;color:var(--muted);margin-bottom:3px;font-weight:600}
+.emi-p-val{font-size:16px;font-weight:600}
+.emi-scroll{max-height:240px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;margin-top:10px}
+.emi-scroll table th{position:sticky;top:0;background:var(--surface)}
+.step-bar{display:flex;align-items:center;margin-bottom:18px}
+.step{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--muted)}
+.step-num{width:22px;height:22px;border-radius:50%;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;background:var(--bg)}
+.step.done .step-num{background:var(--green);color:#fff;border-color:var(--green)}
+.step.active .step-num{background:var(--amber);color:#fff;border-color:var(--amber)}
+.step.active{color:var(--text);font-weight:600}
+.step-line{flex:1;height:1px;background:var(--border);margin:0 5px}
+.appr-stage{display:flex;align-items:flex-start;gap:12px;padding:9px 0;border-bottom:1px solid #f0ede5;font-size:13px}
+.appr-stage:last-child{border-bottom:none}
+.appr-dot{width:20px;height:20px;border-radius:50%;flex-shrink:0;margin-top:1px;display:flex;align-items:center;justify-content:center}
+.dot-done{background:#EAF3DE;border:1px solid var(--green)}
+.dot-active{background:#FAEEDA;border:1px solid var(--amber)}
+.dot-wait{background:var(--bg);border:1px solid var(--border)}
+.chart-wrap{position:relative;width:100%;height:165px}
+
+/* ===================== ADMIN SPECIFICS ===================== */
+.admin-user-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:10px;display:flex;align-items:center;gap:14px}
+.admin-user-av{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;flex-shrink:0}
+.admin-user-info{flex:1}
+.admin-user-name{font-weight:600;font-size:14px}
+.admin-user-meta{font-size:11px;color:var(--muted);margin-top:2px}
+.admin-user-stats{display:flex;gap:16px;margin-left:auto;text-align:center}
+.admin-stat{text-align:center}
+.admin-stat-val{font-size:16px;font-weight:600}
+.admin-stat-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+
+/* ===================== SUBSCRIPTION LIMIT NOTICE ===================== */
+.limit-warn{background:#FAEEDA;border:1px solid #FAC775;border-radius:9px;padding:10px 14px;font-size:12px;color:#633806;display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+</style>
+</head>
+<body>
+
+<!-- ==================== AUTH SCREENS ==================== -->
+<div class="auth-shell" id="authShell">
+
+  <!-- LOGIN -->
+  <div class="auth-panel active" id="panelLogin">
+    <div class="auth-left">
+      <div class="auth-left-bg"></div>
+      <div class="auth-logo">
+        <div class="auth-logo-icon"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="7" fill="#fff"/><path d="M5.5 9.5l3 3 5-5" stroke="#B8860B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <span class="auth-logo-name">VaultFinance</span>
+      </div>
+      <div class="auth-left-content">
+        <div class="auth-left-title">Manage Gold &amp; Vehicle Loans with confidence</div>
+        <div class="auth-left-sub">Purpose-built for small finance shops. Track customers, approve loans, collect EMIs — all in one place.</div>
+        <div class="auth-features">
+          <div class="auth-feat"><span class="auth-feat-dot"></span>KYC &amp; customer profiles</div>
+          <div class="auth-feat"><span class="auth-feat-dot"></span>Loan application &amp; approval workflow</div>
+          <div class="auth-feat"><span class="auth-feat-dot"></span>EMI tracking &amp; overdue alerts</div>
+          <div class="auth-feat"><span class="auth-feat-dot"></span>30 days free — no credit card needed</div>
+        </div>
+      </div>
+    </div>
+    <div class="auth-right">
+      <div class="auth-box">
+        <div class="auth-title">Welcome back</div>
+        <div class="auth-sub">Sign in to your VaultFinance account</div>
+        <div class="auth-form">
+          <div id="loginErr" class="auth-err"></div>
+          <div class="fg"><label class="fl">Email Address</label><input class="fi" id="login-email" type="email" placeholder="you@company.com"></div>
+          <div class="fg"><label class="fl">Password</label><input class="fi" id="login-pass" type="password" placeholder="••••••••"></div>
+          <button class="btn-auth btn-auth-primary" onclick="doLogin()">Sign In</button>
+          <div class="auth-divider">Don't have an account? <span class="auth-link" onclick="showPanel('panelRegister')">Create one free</span></div>
+          <div class="auth-divider" style="margin-top:2px;font-size:11px;color:var(--hint)">Admin? Use admin@vaultfinance.com / admin123</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- REGISTER -->
+  <div class="auth-panel" id="panelRegister">
+    <div class="auth-left">
+      <div class="auth-left-bg"></div>
+      <div class="auth-logo">
+        <div class="auth-logo-icon"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="7" fill="#fff"/><path d="M5.5 9.5l3 3 5-5" stroke="#B8860B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <span class="auth-logo-name">VaultFinance</span>
+      </div>
+      <div class="auth-left-content">
+        <div class="auth-left-title">Start your 30-day free trial today</div>
+        <div class="auth-left-sub">Get full access to all features. No credit card required for the trial.</div>
+        <div class="auth-features">
+          <div class="auth-feat"><span class="auth-feat-dot"></span>All features unlocked for 30 days</div>
+          <div class="auth-feat"><span class="auth-feat-dot"></span>Monthly plan ₹20/mo · Yearly ₹150/yr</div>
+          <div class="auth-feat"><span class="auth-feat-dot"></span>Up to 10 customers on base plan</div>
+          <div class="auth-feat"><span class="auth-feat-dot"></span>Upgrade anytime for more customers</div>
+        </div>
+      </div>
+    </div>
+    <div class="auth-right">
+      <div class="auth-box">
+        <div class="auth-title">Create your account</div>
+        <div class="auth-sub">Join VaultFinance — first 30 days on us</div>
+        <div class="auth-form">
+          <div id="regErr" class="auth-err"></div>
+          <div id="regOk" class="auth-ok"></div>
+          <div class="fi-2col">
+            <div class="fg"><label class="fl">Your Name</label><input class="fi" id="reg-name" placeholder="Ravi Kumar"></div>
+            <div class="fg"><label class="fl">Company / Shop Name</label><input class="fi" id="reg-company" placeholder="Sri Ram Finance"></div>
+          </div>
+          <div class="fg"><label class="fl">Email Address</label><input class="fi" id="reg-email" type="email" placeholder="you@company.com"></div>
+          <div class="fi-2col">
+            <div class="fg"><label class="fl">Password</label><input class="fi" id="reg-pass" type="password" placeholder="Min 6 chars"></div>
+            <div class="fg"><label class="fl">Phone</label><input class="fi" id="reg-phone" placeholder="9876543210"></div>
+          </div>
+          <div class="fg">
+            <label class="fl">Choose Plan <span style="font-size:10px;font-weight:400">(you get 30 days free first)</span></label>
+            <div class="plan-cards">
+              <div class="plan-card selected" id="planFree" onclick="selectPlan('free')">
+                <div class="plan-card-name">Free Trial</div>
+                <div class="plan-card-price">₹0</div>
+                <div class="plan-card-note">30 days</div>
+                <div class="plan-badge">All features</div>
+              </div>
+              <div class="plan-card" id="planMonthly" onclick="selectPlan('monthly')">
+                <div class="plan-card-name">Monthly</div>
+                <div class="plan-card-price">₹20</div>
+                <div class="plan-card-note">per month</div>
+              </div>
+              <div class="plan-card" id="planYearly" onclick="selectPlan('yearly')">
+                <div class="plan-card-name">Yearly</div>
+                <div class="plan-card-price">₹150</div>
+                <div class="plan-card-note">per year</div>
+              </div>
+            </div>
+          </div>
+          <button class="btn-auth btn-auth-primary" onclick="doRegister()">Create Account &amp; Start Free Trial</button>
+          <div class="auth-divider">Already have an account? <span class="auth-link" onclick="showPanel('panelLogin')">Sign in</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== SUBSCRIPTION UPGRADE MODAL ==================== -->
+<div class="sub-modal-overlay" id="subModal">
+  <div class="sub-modal">
+    <div class="sub-modal-head">
+      <div class="sub-modal-title">Upgrade Your Plan</div>
+      <div class="sub-modal-sub">Continue using all features of VaultFinance</div>
+    </div>
+    <div class="sub-modal-body">
+      <div class="sub-plans">
+        <div class="sub-plan active" id="subMonthly" onclick="selectSubPlan('monthly')">
+          <div class="sub-plan-name">Monthly</div>
+          <div class="sub-plan-price">₹20 <span style="font-size:13px;font-weight:400;color:var(--muted)">/mo</span></div>
+          <div class="sub-plan-note">Billed monthly · Cancel anytime</div>
+        </div>
+        <div class="sub-plan" id="subYearly" onclick="selectSubPlan('yearly')">
+          <div class="sub-plan-name">Yearly</div>
+          <div class="sub-plan-price">₹150 <span style="font-size:13px;font-weight:400;color:var(--muted)">/yr</span></div>
+          <div class="sub-plan-note">Save ₹90 vs monthly · Best value</div>
+        </div>
+      </div>
+      <div class="sub-features">
+        <div style="font-size:12px;font-weight:600;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:.05em">What's included</div>
+        <div class="sub-feat"><div class="sub-feat-icon"><svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M1 4l2 2 4-4" stroke="#3B6D11" stroke-width="1.5" stroke-linecap="round"/></svg></div>Up to 10 customers (base plan)</div>
+        <div class="sub-feat"><div class="sub-feat-icon"><svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M1 4l2 2 4-4" stroke="#3B6D11" stroke-width="1.5" stroke-linecap="round"/></svg></div>Gold &amp; Vehicle loan management</div>
+        <div class="sub-feat"><div class="sub-feat-icon"><svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M1 4l2 2 4-4" stroke="#3B6D11" stroke-width="1.5" stroke-linecap="round"/></svg></div>KYC verification workflow</div>
+        <div class="sub-feat"><div class="sub-feat-icon"><svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M1 4l2 2 4-4" stroke="#3B6D11" stroke-width="1.5" stroke-linecap="round"/></svg></div>EMI tracker &amp; overdue alerts</div>
+        <div class="sub-feat"><div class="sub-feat-icon"><svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M1 4l2 2 4-4" stroke="#3B6D11" stroke-width="1.5" stroke-linecap="round"/></svg></div>For more than 10 customers — contact admin for custom pricing</div>
+      </div>
+    </div>
+    <div class="sub-modal-foot">
+      <button class="btn-auth btn-auth-primary" onclick="confirmUpgrade()">Subscribe Now</button>
+      <button class="btn" style="text-align:center" onclick="closeSubModal()">Maybe later</button>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== EXPIRED OVERLAY ==================== -->
+<div class="expired-overlay" id="expiredOverlay">
+  <div class="expired-box">
+    <div class="expired-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#A32D2D" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16v.5"/></svg></div>
+    <div style="font-family:'DM Serif Display',serif;font-size:22px;margin-bottom:8px">Trial Expired</div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:20px;line-height:1.6">Your 30-day free trial has ended. Subscribe to continue accessing all your loan data and features.</div>
+    <button class="btn-auth btn-auth-primary" style="margin-bottom:10px" onclick="openSubModal()">View Plans &amp; Subscribe</button>
+    <div style="font-size:12px;color:var(--muted);margin-top:6px;cursor:pointer" onclick="doLogout()">Sign out</div>
+  </div>
+</div>
+
+<!-- ==================== APP SHELL ==================== -->
+<div class="app-shell" id="appShell">
+
+  <!-- TRIAL BANNER -->
+  <div class="trial-banner" id="trialBanner" style="display:none">
+    <div class="trial-text" id="trialBannerText"></div>
+    <button class="trial-upgrade-btn" onclick="openSubModal()">Upgrade Now</button>
+  </div>
+
+  <div class="app-body">
+    <!-- SIDEBAR -->
+    <div class="sidebar" id="mainSidebar">
+      <div class="sidebar-logo">
+        <div class="sidebar-logo-icon"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="6" fill="#fff"/><path d="M4 7.5l2 2 4-4" stroke="#B8860B" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <span class="sidebar-logo-text">VaultFinance</span>
+      </div>
+      <div class="sidebar-user">
+        <div class="sidebar-av" id="sidebarAv"></div>
+        <div style="flex:1;overflow:hidden">
+          <div class="sidebar-user-name" id="sidebarName"></div>
+          <div class="sidebar-user-role" id="sidebarRole"></div>
+        </div>
+        <button class="sidebar-logout" onclick="doLogout()">Out</button>
+      </div>
+      <!-- Finance user nav -->
+      <div id="userNav">
+        <div class="nav-group">
+          <div class="nav-label">Overview</div>
+          <div class="nav-item active" onclick="navTo('dashboard',this)">
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.5"><rect x=".5" y=".5" width="5" height="5" rx="1"/><rect x="7.5" y=".5" width="5" height="5" rx="1"/><rect x=".5" y="7.5" width="5" height="5" rx="1"/><rect x="7.5" y="7.5" width="5" height="5" rx="1"/></svg>
+            Dashboard
+          </div>
+        </div>
+        <div class="nav-group">
+          <div class="nav-label">Customers</div>
+          <div class="nav-item" onclick="navTo('customers',this)">
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6.5" cy="4" r="2.5"/><path d="M1 12.5c0-3 2.5-5 5.5-5s5.5 2 5.5 5"/></svg>
+            Customers
+          </div>
+          <div class="nav-item" onclick="navTo('kyc',this)">
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.5"><rect x=".5" y="2" width="12" height="9" rx="1.5"/><path d="M.5 6h12M3.5 6v5"/></svg>
+            KYC
+            <span class="nav-badge nb-amber" id="kycBadge">0</span>
+          </div>
+        </div>
+        <div class="nav-group">
+          <div class="nav-label">Loans</div>
+          <div class="nav-item" onclick="navTo('applications',this)">
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 13V3l2.5-2.5H12V13H2z"/><path d="M4.5.5v3H2M4 7.5h5M4 10h4"/></svg>
+            Applications
+            <span class="nav-badge nb-amber" id="appBadge">0</span>
+          </div>
+          <div class="nav-item" onclick="navTo('loans',this)">
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6.5" cy="6.5" r="6"/><path d="M6.5 3.5v3l2 1.5"/></svg>
+            Active Loans
+          </div>
+        </div>
+        <div class="nav-group">
+          <div class="nav-label">Collections</div>
+          <div class="nav-item" onclick="navTo('emi',this)">
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.5"><rect x=".5" y="1.5" width="12" height="10" rx="1.5"/><path d="M.5 5.5h12M3.5 5.5v6"/></svg>
+            EMI Tracker
+            <span class="nav-badge nb-amber" id="emiDueBadge">0</span>
+          </div>
+          <div class="nav-item" onclick="navTo('overdue',this)">
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6.5 1L.5 12.5h12L6.5 1z"/><path d="M6.5 5.5v3M6.5 10v.8"/></svg>
+            Overdue Alerts
+            <span class="nav-badge" id="overdueBadge">0</span>
+          </div>
+        </div>
+        <div class="nav-group">
+          <div class="nav-label">Account</div>
+          <div class="nav-item" onclick="navTo('subscription',this)">
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6.5" cy="6.5" r="5.5"/><path d="M6.5 4v3l2 1"/></svg>
+            Subscription
+          </div>
+        </div>
+      </div>
+
+      <!-- Admin nav -->
+      <div id="adminNav" style="display:none">
+        <div class="nav-group">
+          <div class="nav-label">Admin</div>
+          <div class="nav-item active" onclick="navTo('adminDash',this)">
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.5"><rect x=".5" y=".5" width="5" height="5" rx="1"/><rect x="7.5" y=".5" width="5" height="5" rx="1"/><rect x=".5" y="7.5" width="5" height="5" rx="1"/><rect x="7.5" y="7.5" width="5" height="5" rx="1"/></svg>
+            Admin Dashboard
+          </div>
+          <div class="nav-item" onclick="navTo('adminUsers',this)">
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6.5" cy="4" r="2.5"/><path d="M1 12.5c0-3 2.5-5 5.5-5s5.5 2 5.5 5"/></svg>
+            Finance Users
+            <span class="nav-badge nb-amber" id="adminUserBadge">0</span>
+          </div>
+          <div class="nav-item" onclick="navTo('adminSubscriptions',this)">
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.5"><rect x=".5" y="2" width="12" height="9" rx="1.5"/><path d="M.5 6h12"/></svg>
+            Subscriptions
+          </div>
+          <div class="nav-item" onclick="navTo('adminAllLoans',this)">
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6.5" cy="6.5" r="6"/><path d="M6.5 3.5v3l2 1.5"/></svg>
+            All Loans
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div class="main">
+      <div class="topbar">
+        <div>
+          <div class="topbar-title" id="pageTitle">Dashboard</div>
+          <div class="topbar-sub" id="pageSubtitle"></div>
+        </div>
+        <div class="topbar-right" id="topbarActions">
+          <input class="search-input" type="text" placeholder="Search customers..." oninput="globalSearch(this.value)" id="globalSearchInput">
+          <button class="btn btn-amber" onclick="openNewApp()" id="newAppBtn">+ New Application</button>
+        </div>
+      </div>
+
+      <div class="scroll-area">
+
+        <!-- ===== USER: DASHBOARD ===== -->
+        <div class="page active" id="page-dashboard">
+          <div class="kpi-grid">
+            <div class="kpi"><div class="kpi-label">Total Disbursed</div><div class="kpi-value" id="kpiDisbursed">₹0</div><div class="kpi-footer" id="kpiDisbursedSub"></div><div class="kpi-accent" style="background:#FAEEDA"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="6" stroke="#BA7517" stroke-width="1.5"/><path d="M7 4v3l2 1.5" stroke="#BA7517" stroke-width="1.5" stroke-linecap="round"/></svg></div></div>
+            <div class="kpi"><div class="kpi-label">Active Loans</div><div class="kpi-value" id="kpiActive">0</div><div class="kpi-footer" id="kpiActiveSub"></div><div class="kpi-accent" style="background:#E6F1FB"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="3.5" width="12" height="8" rx="1.5" stroke="#185FA5" stroke-width="1.5"/><path d="M3.5 3.5V3a1 1 0 0 1 1-1h5a1 1 0 0 1 1 1v.5" stroke="#185FA5" stroke-width="1.5"/></svg></div></div>
+            <div class="kpi"><div class="kpi-label">EMI Due Today</div><div class="kpi-value" id="kpiDue">₹0</div><div class="kpi-footer" id="kpiDueSub" style="color:#BA7517"></div><div class="kpi-accent" style="background:#EAF3DE"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="2.5" width="12" height="9" rx="1.5" stroke="#3B6D11" stroke-width="1.5"/><path d="M1 6.5h12M4.5 6.5V11" stroke="#3B6D11" stroke-width="1.5"/></svg></div></div>
+            <div class="kpi"><div class="kpi-label">Overdue (NPA)</div><div class="kpi-value kpi-down" id="kpiOverdue">₹0</div><div class="kpi-footer kpi-down" id="kpiOverdueSub"></div><div class="kpi-accent" style="background:#FCEBEB"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1L.5 13h13L7 1z" stroke="#A32D2D" stroke-width="1.5" stroke-linejoin="round"/><path d="M7 5.5v3M7 10v.8" stroke="#A32D2D" stroke-width="1.5" stroke-linecap="round"/></svg></div></div>
+          </div>
+          <div class="kpi-grid">
+            <div class="kpi" style="border-left:3px solid var(--amber)"><div class="kpi-label">Gold Loans</div><div class="kpi-value" id="kpiGold">₹0</div><div class="kpi-footer" id="kpiGoldSub"></div></div>
+            <div class="kpi" style="border-left:3px solid var(--blue)"><div class="kpi-label">Vehicle Loans</div><div class="kpi-value" id="kpiVehicle">₹0</div><div class="kpi-footer" id="kpiVehicleSub"></div></div>
+            <div class="kpi"><div class="kpi-label">Pending Apps</div><div class="kpi-value" id="kpiApps">0</div><div class="kpi-footer" style="color:#BA7517">Awaiting approval</div></div>
+            <div class="kpi"><div class="kpi-label">Total Customers</div><div class="kpi-value" id="kpiCusts">0</div><div class="kpi-footer" id="kpiCustsSub"></div></div>
+          </div>
+          <div class="two-col">
+            <div class="card"><div class="card-header"><span class="card-title">Due Today</span><span class="card-link" onclick="navTo('emi',null)">View all</span></div><div id="dashDueList"></div></div>
+            <div class="card"><div class="card-header"><span class="card-title">Pending Applications</span><span class="card-link" onclick="navTo('applications',null)">Review</span></div><div id="dashAppList"></div></div>
+          </div>
+          <div class="equal-col">
+            <div class="card"><div class="card-header"><span class="card-title">Portfolio Mix</span></div><div id="portLegend" style="display:flex;gap:14px;font-size:12px;color:var(--muted);margin-bottom:8px"></div><div class="chart-wrap"><canvas id="portChart"></canvas></div></div>
+            <div class="card"><div class="card-header"><span class="card-title">Monthly Collections</span></div><div id="colLegend" style="display:flex;gap:14px;font-size:12px;color:var(--muted);margin-bottom:8px"></div><div class="chart-wrap"><canvas id="colChart"></canvas></div></div>
+          </div>
+          <div class="card"><div class="card-header"><span class="card-title">Overdue Alerts</span><span class="card-link" onclick="navTo('overdue',null)">Manage</span></div><div id="dashOverdueList"></div></div>
+        </div>
+
+        <!-- ===== USER: CUSTOMERS ===== -->
+        <div class="page" id="page-customers">
+          <div id="custLimitWarn" class="limit-warn" style="display:none">
+            <span>You've reached your 10-customer limit on the base plan. <strong>Contact admin for a custom upgrade.</strong></span>
+            <button class="btn btn-sm btn-amber" onclick="openSubModal()">Upgrade</button>
+          </div>
+          <div class="filter-row">
+            <input class="search-input" style="width:200px" type="text" placeholder="Search name / phone..." oninput="filterCust(this.value)">
+            <select class="fsel" onchange="filterCustKyc(this.value)"><option value="">All KYC</option><option>Verified</option><option>Pending</option></select>
+            <button class="btn btn-amber" id="addCustBtn" onclick="openAddCust()">+ Add Customer</button>
+          </div>
+          <div class="card" style="padding:0"><table><thead><tr><th>Customer</th><th>Phone</th><th>KYC</th><th>Aadhaar</th><th>Active Loans</th><th>Outstanding</th><th></th></tr></thead><tbody id="custTbody"></tbody></table></div>
+        </div>
+
+        <!-- ===== USER: KYC ===== -->
+        <div class="page" id="page-kyc">
+          <div class="alert alert-amber" id="kycAlertBanner"></div>
+          <div class="card" style="padding:0"><table><thead><tr><th>Customer</th><th>Submitted</th><th>Documents</th><th>Aadhaar</th><th>PAN</th><th>Status</th><th>Action</th></tr></thead><tbody id="kycTbody"></tbody></table></div>
+        </div>
+
+        <!-- ===== USER: APPLICATIONS ===== -->
+        <div class="page" id="page-applications">
+          <div class="alert alert-amber" id="appAlertBanner"></div>
+          <div class="card" style="padding:0"><table><thead><tr><th>App ID</th><th>Customer</th><th>Type</th><th>Amount</th><th>Asset</th><th>Stage</th><th>Action</th></tr></thead><tbody id="appTbody"></tbody></table></div>
+        </div>
+
+        <!-- ===== USER: ACTIVE LOANS ===== -->
+        <div class="page" id="page-loans">
+          <div class="filter-row">
+            <input class="search-input" style="width:190px" type="text" placeholder="Search loans..." oninput="filterLoanSearch(this.value)">
+            <select class="fsel" onchange="filterLoanType(this.value)"><option value="">All types</option><option>Gold</option><option>Vehicle</option></select>
+            <select class="fsel" onchange="filterLoanStatus(this.value)"><option value="">All status</option><option>Active</option><option>Overdue</option><option>Closed</option></select>
+          </div>
+          <div class="card" style="padding:0"><table><thead><tr><th>Loan ID</th><th>Customer</th><th>Type</th><th>Principal</th><th>EMI/mo</th><th>Paid</th><th>Next Due</th><th>Status</th><th></th></tr></thead><tbody id="loansTbody"></tbody></table></div>
+        </div>
+
+        <!-- ===== USER: EMI ===== -->
+        <div class="page" id="page-emi">
+          <div class="alert alert-amber" id="emiAlert"></div>
+          <div class="card" style="padding:0"><table><thead><tr><th>Customer</th><th>Loan ID</th><th>Type</th><th>EMI Amount</th><th>Due Date</th><th>EMI #</th><th>Status</th><th>Action</th></tr></thead><tbody id="emiTbody"></tbody></table></div>
+        </div>
+
+        <!-- ===== USER: OVERDUE ===== -->
+        <div class="page" id="page-overdue">
+          <div class="alert alert-red" id="overdueAlert"></div>
+          <div class="card" style="padding:0"><table><thead><tr><th>Customer</th><th>Loan ID</th><th>Type</th><th>Overdue Amt</th><th>Days Late</th><th>Asset</th><th>Phone</th><th>Action</th></tr></thead><tbody id="overdueTbody"></tbody></table></div>
+        </div>
+
+        <!-- ===== USER: SUBSCRIPTION ===== -->
+        <div class="page" id="page-subscription">
+          <div class="equal-col" style="max-width:640px">
+            <div class="card" style="text-align:center">
+              <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Current Plan</div>
+              <div style="font-size:28px;font-weight:600;margin-bottom:4px" id="subPlanName">—</div>
+              <div id="subStatus" style="font-size:13px;color:var(--muted);margin-bottom:14px"></div>
+              <button class="btn btn-amber" onclick="openSubModal()">Manage / Upgrade</button>
+            </div>
+            <div class="card">
+              <div class="fs-title">Plan Limits</div>
+              <div class="sub-feat"><div class="sub-feat-icon"><svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M1 4l2 2 4-4" stroke="#3B6D11" stroke-width="1.5" stroke-linecap="round"/></svg></div><span id="subCustLimit">Up to 10 customers</span></div>
+              <div class="sub-feat"><div class="sub-feat-icon"><svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M1 4l2 2 4-4" stroke="#3B6D11" stroke-width="1.5" stroke-linecap="round"/></svg></div>All loan types</div>
+              <div class="sub-feat"><div class="sub-feat-icon"><svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M1 4l2 2 4-4" stroke="#3B6D11" stroke-width="1.5" stroke-linecap="round"/></svg></div>KYC &amp; EMI tracking</div>
+              <div style="margin-top:12px;font-size:12px;color:var(--muted)">For more than 10 customers, contact <strong>admin@vaultfinance.com</strong> for custom pricing.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ===== ADMIN: DASHBOARD ===== -->
+        <div class="page" id="page-adminDash">
+          <div class="kpi-grid-3">
+            <div class="kpi"><div class="kpi-label">Total Finance Users</div><div class="kpi-value" id="aKpiUsers">0</div><div class="kpi-footer">Registered on platform</div></div>
+            <div class="kpi"><div class="kpi-label">Active Subscriptions</div><div class="kpi-value kpi-up" id="aKpiSubs">0</div><div class="kpi-footer">Paying users</div></div>
+            <div class="kpi"><div class="kpi-label">Trial Users</div><div class="kpi-value" id="aKpiTrial">0</div><div class="kpi-footer" style="color:#BA7517">In free trial</div></div>
+          </div>
+          <div class="kpi-grid-3">
+            <div class="kpi"><div class="kpi-label">Total End Customers</div><div class="kpi-value" id="aKpiCusts">0</div><div class="kpi-footer">Across all users</div></div>
+            <div class="kpi"><div class="kpi-label">Total Loans</div><div class="kpi-value" id="aKpiLoans">0</div><div class="kpi-footer">Active across platform</div></div>
+            <div class="kpi"><div class="kpi-label">Expired Trials</div><div class="kpi-value kpi-down" id="aKpiExpired">0</div><div class="kpi-footer">Needs follow-up</div></div>
+          </div>
+          <div class="card">
+            <div class="card-header"><span class="card-title">Recent Finance Users</span><span class="card-link" onclick="navTo('adminUsers',null)">View all</span></div>
+            <div id="adminRecentUsers"></div>
+          </div>
+        </div>
+
+        <!-- ===== ADMIN: USERS ===== -->
+        <div class="page" id="page-adminUsers">
+          <div class="filter-row">
+            <input class="search-input" style="width:210px" type="text" placeholder="Search users..." oninput="filterAdminUsers(this.value)">
+            <select class="fsel" onchange="filterAdminUserStatus(this.value)"><option value="">All status</option><option>trial</option><option>subscribed</option><option>expired</option></select>
+          </div>
+          <div id="adminUsersList"></div>
+        </div>
+
+        <!-- ===== ADMIN: SUBSCRIPTIONS ===== -->
+        <div class="page" id="page-adminSubscriptions">
+          <div class="card" style="padding:0">
+            <table><thead><tr><th>User</th><th>Company</th><th>Plan</th><th>Status</th><th>Customers</th><th>Registered</th><th>Expires</th><th>Action</th></tr></thead>
+            <tbody id="adminSubsTbody"></tbody></table>
+          </div>
+        </div>
+
+        <!-- ===== ADMIN: ALL LOANS ===== -->
+        <div class="page" id="page-adminAllLoans">
+          <div class="card" style="padding:0">
+            <table><thead><tr><th>Finance User</th><th>Loan ID</th><th>Customer</th><th>Type</th><th>Amount</th><th>Status</th></tr></thead>
+            <tbody id="adminLoansTbody"></tbody></table>
+          </div>
+        </div>
+
+        <!-- ===== ADMIN: USER DETAIL (modal content injected) ===== -->
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== ADD CUSTOMER MODAL ===== -->
+<div class="modal-overlay" id="mAddCust">
+<div class="modal modal-sm">
+  <div class="modal-head"><span class="modal-title">Add New Customer</span><button class="modal-x" onclick="closeM('mAddCust')">&#x2715;</button></div>
+  <div class="modal-body">
+    <div class="form-2">
+      <div class="fg"><label class="fl">Full Name</label><input class="fi" id="ac-name" placeholder="Ravi Kumar"></div>
+      <div class="fg"><label class="fl">Phone</label><input class="fi" id="ac-phone" placeholder="9876543210"></div>
+      <div class="fg"><label class="fl">Aadhaar</label><input class="fi" id="ac-aadhaar" placeholder="XXXX XXXX XXXX"></div>
+      <div class="fg"><label class="fl">PAN</label><input class="fi" id="ac-pan" placeholder="ABCDE1234F"></div>
+    </div>
+    <div class="fg"><label class="fl">Address</label><input class="fi" id="ac-addr" placeholder="Street, City, PIN"></div>
+    <div class="form-2" style="margin-top:8px">
+      <div class="fg"><label class="fl">KYC</label><select class="fi" id="ac-kyc"><option>Verified</option><option>Pending</option></select></div>
+      <div class="fg"><label class="fl">Type</label><select class="fi" id="ac-type"><option>Individual</option><option>Business</option></select></div>
+    </div>
+  </div>
+  <div class="modal-foot"><button class="btn" onclick="closeM('mAddCust')">Cancel</button><button class="btn btn-amber" onclick="saveCustomer()">Add Customer</button></div>
+</div>
+</div>
+
+<!-- ===== NEW APPLICATION MODAL ===== -->
+<div class="modal-overlay" id="mNewApp">
+<div class="modal">
+  <div class="modal-head"><span class="modal-title">New Loan Application</span><button class="modal-x" onclick="closeM('mNewApp')">&#x2715;</button></div>
+  <div class="modal-body">
+    <div class="step-bar"><div class="step done"><div class="step-num">1</div><span>Customer</span></div><div class="step-line"></div><div class="step active"><div class="step-num">2</div><span>Loan</span></div><div class="step-line"></div><div class="step"><div class="step-num">3</div><span>Asset</span></div><div class="step-line"></div><div class="step"><div class="step-num">4</div><span>Review</span></div></div>
+    <div class="form-2">
+      <div class="fg"><label class="fl">Customer</label><select class="fi" id="na-cust"></select></div>
+      <div class="fg"><label class="fl">Loan Type</label><select class="fi" id="na-type" onchange="toggleAssetFields()"><option value="Gold">Gold Loan</option><option value="Vehicle">Vehicle Loan</option></select></div>
+      <div class="fg"><label class="fl">Principal (₹)</label><input class="fi" id="na-amount" type="number" placeholder="100000" oninput="calcAppEMI()"></div>
+      <div class="fg"><label class="fl">Rate (% p.a.)</label><input class="fi" id="na-rate" type="number" placeholder="14" oninput="calcAppEMI()"></div>
+      <div class="fg"><label class="fl">Tenure (months)</label><input class="fi" id="na-tenure" type="number" placeholder="12" oninput="calcAppEMI()"></div>
+      <div class="fg"><label class="fl">Disbursement Date</label><input class="fi" id="na-date" type="date"></div>
+    </div>
+    <div id="emiPrev" class="emi-preview"><div style="font-size:10px;font-weight:600;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:.05em">EMI Calculation</div><div class="emi-p-grid"><div><div class="emi-p-label">Monthly EMI</div><div class="emi-p-val" id="app-emi">—</div></div><div><div class="emi-p-label">Total Interest</div><div class="emi-p-val" id="app-int">—</div></div><div><div class="emi-p-label">Total Repayment</div><div class="emi-p-val" id="app-total">—</div></div></div></div>
+    <div class="fs-title" id="assetLabel">Gold Asset Details</div>
+    <div class="form-2" id="goldFields">
+      <div class="fg"><label class="fl">Weight (g)</label><input class="fi" id="na-gold-wt" placeholder="50" oninput="calcLTV()"></div>
+      <div class="fg"><label class="fl">Purity</label><select class="fi" id="na-gold-purity"><option>22 ct</option><option>18 ct</option><option>24 ct</option></select></div>
+      <div class="fg"><label class="fl">Market Value (₹)</label><input class="fi" id="na-gold-val" placeholder="180000" oninput="calcLTV()"></div>
+      <div class="fg"><label class="fl">LTV Ratio</label><input class="fi" id="na-ltv" placeholder="Auto-calculated" readonly style="background:var(--bg)"></div>
+    </div>
+    <div class="form-2" id="vehicleFields" style="display:none">
+      <div class="fg"><label class="fl">Vehicle Type</label><select class="fi" id="na-vtype"><option>Two-Wheeler</option><option>Car</option><option>Commercial</option></select></div>
+      <div class="fg"><label class="fl">Make &amp; Model</label><input class="fi" id="na-vmodel" placeholder="Honda Activa 6G"></div>
+      <div class="fg"><label class="fl">Year</label><input class="fi" id="na-vyear" placeholder="2022"></div>
+      <div class="fg"><label class="fl">RC / Chassis No.</label><input class="fi" id="na-vrc" placeholder="KA01AB1234"></div>
+    </div>
+  </div>
+  <div class="modal-foot"><button class="btn" onclick="closeM('mNewApp')">Cancel</button><button class="btn btn-amber" onclick="submitApp()">Submit Application</button></div>
+</div>
+</div>
+
+<!-- ===== LOAN DETAIL MODAL ===== -->
+<div class="modal-overlay" id="mLoanDetail">
+<div class="modal"><div class="modal-head"><span class="modal-title" id="ldTitle">Loan Details</span><button class="modal-x" onclick="closeM('mLoanDetail')">&#x2715;</button></div><div class="modal-body" id="ldBody"></div></div>
+</div>
+
+<!-- ===== APPROVE MODAL ===== -->
+<div class="modal-overlay" id="mApprove">
+<div class="modal modal-sm">
+  <div class="modal-head"><span class="modal-title" id="apprTitle">Review Application</span><button class="modal-x" onclick="closeM('mApprove')">&#x2715;</button></div>
+  <div class="modal-body"><div id="apprStages"></div><div style="margin-top:10px;font-size:12px;color:var(--muted)">All checks passed. Ready for disbursement.</div></div>
+  <div class="modal-foot"><button class="btn btn-red btn-sm" onclick="rejectApp()">Reject</button><button class="btn btn-green btn-sm" onclick="approveApp()">Approve &amp; Disburse</button></div>
+</div>
+</div>
+
+<!-- ===== ADMIN USER DETAIL MODAL ===== -->
+<div class="modal-overlay" id="mAdminUserDetail">
+<div class="modal">
+  <div class="modal-head"><span class="modal-title" id="adminUserDetailTitle">User Details</span><button class="modal-x" onclick="closeM('mAdminUserDetail')">&#x2715;</button></div>
+  <div class="modal-body" id="adminUserDetailBody"></div>
+  <div class="modal-foot" id="adminUserDetailFoot"></div>
+</div>
+</div>
+
+<script>
+// ============================================================
+// DATA STORE
+// ============================================================
+const AV_BG=['#FAEEDA','#E6F1FB','#EAF3DE','#FBEAF0','#f0ede6','#FCEBEB','#CECBF6'];
+const AV_TX=['#633806','#0C447C','#27500A','#72243E','#555','#791F1F','#26215C'];
+
+// Persisted in-memory (would be localStorage/DB in production)
+let DB = {
+  users: [
+    {
+      id:'admin',email:'admin@vaultfinance.com',pass:'admin123',name:'Super Admin',
+      company:'VaultFinance HQ',phone:'',role:'admin',
+      plan:'admin',trialStart:null,trialDays:0,subscribed:true,subPlan:'admin',subExpiry:null,
+      customers:[],loans:[],applications:[]
+    },
+    {
+      id:'demo1',email:'ravi@sriramnance.com',pass:'demo123',name:'Ravi Shankar',
+      company:'Sri Ram Finance',phone:'9876543210',role:'user',
+      plan:'trial',trialStart: Date.now() - (15*86400000),trialDays:30,subscribed:false,subPlan:null,subExpiry:null,
+      customers:[
+        {id:'C01',name:'Meena Pillai',phone:'9845001122',aadhaar:'7832-XXXX',pan:'MNBPK5678G',addr:'Anna Nagar, Chennai',kyc:'Verified',type:'Individual'},
+        {id:'C02',name:'Farhan Qureshi',phone:'9712345678',aadhaar:'6524-XXXX',pan:'FQHPF2345H',addr:'Banjara Hills, Hyd',kyc:'Pending',type:'Business'},
+        {id:'C03',name:'Lakshmi Devi',phone:'9900112233',aadhaar:'1234-XXXX',pan:'LDKSP9012J',addr:'Whitefield, Bengaluru',kyc:'Verified',type:'Individual'},
+      ],
+      loans:[
+        {id:'GL0041',custId:'C01',type:'Gold',amount:120000,rate:14,tenure:12,disbDate:'2024-11-01',paid:4,status:'Active',asset:'42g 22ct Gold · ₹1.8L MV'},
+        {id:'VL0019',custId:'C02',type:'Vehicle',amount:280000,rate:12,tenure:36,disbDate:'2024-09-15',paid:6,status:'Overdue',asset:'Honda City 2022 · KA05AB1234'},
+        {id:'GL0042',custId:'C03',type:'Gold',amount:50000,rate:14,tenure:6,disbDate:'2025-01-10',paid:2,status:'Active',asset:'18g 22ct Gold · ₹62K MV'},
+      ],
+      applications:[
+        {id:'APP001',custId:'C02',type:'Vehicle',amount:100000,rate:12,tenure:24,asset:'Yamaha FZ 2023',stage:'Doc Verification'},
+      ]
+    }
+  ]
+};
+
+let currentUser = null;
+let selectedPlan = 'free';
+let selectedSubPlan = 'monthly';
+let currentAppId = null;
+let lTypeFilter='', lStatusFilter='', lSearchFilter='';
+let custFilter='', custKycFilter='';
+let adminUserFilter='', adminUserStatusFilter='';
+
+// ============================================================
+// HELPERS
+// ============================================================
+function ini(n){return n.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase()}
+function avEl(name,sz=26,idx){
+  if(idx===undefined)idx=0;
+  const i=idx%AV_BG.length;
+  return`<div class="av" style="width:${sz}px;height:${sz}px;background:${AV_BG[i]};color:${AV_TX[i]}">${ini(name)}</div>`
+}
+function custAvEl(name,sz=26){
+  const i=currentUser?currentUser.customers.findIndex(c=>c.name===name)%AV_BG.length:0;
+  return avEl(name,sz,i);
+}
+function fmt(n){return'₹'+Math.round(n).toLocaleString('en-IN')}
+function emiCalc(p,r,n){const mr=r/12/100;return mr===0?p/n:p*mr*Math.pow(1+mr,n)/(Math.pow(1+mr,n)-1)}
+function cn(id){return currentUser?.customers.find(c=>c.id===id)?.name||'—'}
+function today(){return new Date().toISOString().split('T')[0]}
+function daysLeft(user){
+  if(!user.trialStart)return 0;
+  const elapsed=Math.floor((Date.now()-user.trialStart)/86400000);
+  return Math.max(0, user.trialDays - elapsed);
+}
+function isExpired(user){
+  if(user.role==='admin')return false;
+  if(user.subscribed){
+    if(!user.subExpiry)return false;
+    return Date.now() > user.subExpiry;
+  }
+  return daysLeft(user)<=0;
+}
+function planLabel(user){
+  if(user.role==='admin')return'Admin';
+  if(user.subscribed) return user.subPlan==='monthly'?'Monthly Plan':'Yearly Plan';
+  const dl=daysLeft(user);
+  if(dl>0) return `Trial (${dl}d left)`;
+  return'Expired';
+}
+function planBadge(user){
+  if(user.role==='admin')return'<span class="badge b-admin">Admin</span>';
+  if(user.subscribed)return'<span class="badge b-subscribed">Subscribed</span>';
+  const dl=daysLeft(user);
+  if(dl>0)return`<span class="badge b-trial">Trial · ${dl}d left</span>`;
+  return'<span class="badge b-expired">Expired</span>';
+}
+
+// ============================================================
+// AUTH
+// ============================================================
+function showPanel(id){
+  document.querySelectorAll('.auth-panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function selectPlan(p){
+  selectedPlan=p;
+  ['planFree','planMonthly','planYearly'].forEach(id=>document.getElementById(id).classList.remove('selected'));
+  const map={free:'planFree',monthly:'planMonthly',yearly:'planYearly'};
+  document.getElementById(map[p]).classList.add('selected');
+}
+
+function doLogin(){
+  const email=document.getElementById('login-email').value.trim().toLowerCase();
+  const pass=document.getElementById('login-pass').value;
+  const user=DB.users.find(u=>u.email.toLowerCase()===email && u.pass===pass);
+  const err=document.getElementById('loginErr');
+  if(!user){err.textContent='Invalid email or password.';err.classList.add('show');return;}
+  err.classList.remove('show');
+  currentUser=user;
+  launchApp();
+}
+
+function doRegister(){
+  const name=document.getElementById('reg-name').value.trim();
+  const company=document.getElementById('reg-company').value.trim();
+  const email=document.getElementById('reg-email').value.trim().toLowerCase();
+  const pass=document.getElementById('reg-pass').value;
+  const phone=document.getElementById('reg-phone').value.trim();
+  const err=document.getElementById('regErr');
+  const ok=document.getElementById('regOk');
+  err.classList.remove('show');ok.classList.remove('show');
+  if(!name||!company||!email||!pass){err.textContent='Please fill all required fields.';err.classList.add('show');return;}
+  if(pass.length<6){err.textContent='Password must be at least 6 characters.';err.classList.add('show');return;}
+  if(DB.users.find(u=>u.email.toLowerCase()===email)){err.textContent='An account with this email already exists.';err.classList.add('show');return;}
+  const subscribed = selectedPlan!=='free';
+  const subExpiry = selectedPlan==='monthly'
+    ? Date.now()+30*86400000
+    : selectedPlan==='yearly'
+    ? Date.now()+365*86400000
+    : null;
+  const newUser={
+    id:'U'+Date.now(),email,pass,name,company,phone,role:'user',
+    plan:selectedPlan==='free'?'trial':selectedPlan,
+    trialStart:Date.now(),trialDays:30,
+    subscribed:subscribed,subPlan:selectedPlan==='free'?null:selectedPlan,subExpiry,
+    customers:[],loans:[],applications:[]
+  };
+  DB.users.push(newUser);
+  ok.textContent='Account created! Signing you in...';ok.classList.add('show');
+  setTimeout(()=>{currentUser=newUser;launchApp();},1000);
+}
+
+function doLogout(){
+  currentUser=null;
+  document.getElementById('appShell').classList.remove('active');
+  document.getElementById('authShell').style.display='flex';
+  document.getElementById('expiredOverlay').classList.remove('show');
+  document.getElementById('trialBanner').style.display='none';
+  showPanel('panelLogin');
+  document.getElementById('login-email').value='';
+  document.getElementById('login-pass').value='';
+}
+
+// ============================================================
+// APP LAUNCH
+// ============================================================
+function launchApp(){
+  document.getElementById('authShell').style.display='none';
+  document.getElementById('appShell').classList.add('active');
+  // Setup sidebar user info
+  const av=document.getElementById('sidebarAv');
+  av.textContent=ini(currentUser.name);
+  const i=DB.users.indexOf(currentUser)%AV_BG.length;
+  av.style.background=AV_BG[i];av.style.color=AV_TX[i];
+  document.getElementById('sidebarName').textContent=currentUser.name;
+  document.getElementById('sidebarRole').textContent=currentUser.role==='admin'?'Super Admin':currentUser.company;
+
+  if(currentUser.role==='admin'){
+    document.getElementById('userNav').style.display='none';
+    document.getElementById('adminNav').style.display='block';
+    document.getElementById('topbarActions').innerHTML='';
+    document.getElementById('trialBanner').style.display='none';
+    renderAdminDash();
+    navTo('adminDash',null);
+  } else {
+    document.getElementById('userNav').style.display='block';
+    document.getElementById('adminNav').style.display='none';
+    document.getElementById('topbarActions').innerHTML=`
+      <input class="search-input" type="text" placeholder="Search customers..." oninput="globalSearch(this.value)">
+      <button class="btn btn-amber" onclick="openNewApp()">+ New Application</button>`;
+    setupTrialBanner();
+    if(isExpired(currentUser)){
+      document.getElementById('expiredOverlay').classList.add('show');
+    }
+    renderUserDash();
+    navTo('dashboard',null);
+  }
+}
+
+function setupTrialBanner(){
+  const banner=document.getElementById('trialBanner');
+  if(currentUser.subscribed){
+    const label=planLabel(currentUser);
+    if(currentUser.subExpiry){
+      const d=Math.ceil((currentUser.subExpiry-Date.now())/86400000);
+      banner.style.display='flex';
+      document.getElementById('trialBannerText').innerHTML=`<strong>${label}</strong> — renews in ${d} days`;
+    } else {
+      banner.style.display='none';
+    }
+  } else {
+    const dl=daysLeft(currentUser);
+    if(dl>0){
+      banner.style.display='flex';
+      document.getElementById('trialBannerText').innerHTML=`Free trial: <strong>${dl} days remaining</strong> — upgrade to keep your data`;
+    } else {
+      banner.style.display='none';
+    }
+  }
+}
+
+// ============================================================
+// NAV
+// ============================================================
+function navTo(page, el){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  const pg=document.getElementById('page-'+page);
+  if(pg)pg.classList.add('active');
+  if(el)el.classList.add('active');
+  else{
+    document.querySelectorAll('.nav-item').forEach(n=>{
+      if(n.getAttribute('onclick')&&n.getAttribute('onclick').includes("'"+page+"'"))n.classList.add('active');
+    });
+  }
+  const T={dashboard:'Dashboard',customers:'Customers',kyc:'KYC Verification',applications:'Loan Applications',loans:'Active Loans',emi:'EMI Tracker',overdue:'Overdue Alerts',subscription:'Subscription',adminDash:'Admin Dashboard',adminUsers:'Finance Users',adminSubscriptions:'Subscriptions',adminAllLoans:'All Loans'};
+  document.getElementById('pageTitle').textContent=T[page]||page;
+  document.getElementById('pageSubtitle').textContent=currentUser?.role==='admin'?'VaultFinance Admin Panel':currentUser?.company||'';
+  if(page==='customers')renderCusts();
+  if(page==='kyc')renderKYC();
+  if(page==='applications')renderApps();
+  if(page==='loans'){lTypeFilter='';lStatusFilter='';lSearchFilter='';renderLoans();}
+  if(page==='emi')renderEMI();
+  if(page==='overdue')renderOverdue();
+  if(page==='subscription')renderSubPage();
+  if(page==='adminDash')renderAdminDash();
+  if(page==='adminUsers')renderAdminUsers();
+  if(page==='adminSubscriptions')renderAdminSubs();
+  if(page==='adminAllLoans')renderAdminLoans();
+}
+
+function globalSearch(q){
+  if(!q)return;
+  navTo('customers',null);
+  filterCust(q);
+}
+
+// ============================================================
+// USER: DASHBOARD
+// ============================================================
+function renderUserDash(){
+  const u=currentUser;
+  const loans=u.loans;
+  const custs=u.customers;
+  const active=loans.filter(l=>l.status==='Active');
+  const overdue=loans.filter(l=>l.status==='Overdue');
+  const gold=loans.filter(l=>l.type==='Gold');
+  const vehicle=loans.filter(l=>l.type==='Vehicle');
+  const totalDisb=loans.reduce((s,l)=>s+l.amount,0);
+  const goldDisb=gold.reduce((s,l)=>s+l.amount,0);
+  const vehicleDisb=vehicle.reduce((s,l)=>s+l.amount,0);
+  const dueTotal=active.reduce((s,l)=>s+emiCalc(l.amount,l.rate,l.tenure),0);
+  const overdueTotal=overdue.reduce((s,l)=>s+emiCalc(l.amount,l.rate,l.tenure)*1.5,0);
+
+  document.getElementById('kpiDisbursed').textContent=fmt(totalDisb);
+  document.getElementById('kpiActive').textContent=active.length;
+  document.getElementById('kpiActiveSub').textContent=`${gold.filter(l=>l.status==='Active').length} Gold · ${vehicle.filter(l=>l.status==='Active').length} Vehicle`;
+  document.getElementById('kpiDue').textContent=fmt(dueTotal);
+  document.getElementById('kpiDueSub').textContent=active.length+' accounts due';
+  document.getElementById('kpiOverdue').textContent=fmt(overdueTotal);
+  document.getElementById('kpiOverdueSub').textContent=overdue.length+' customers';
+  document.getElementById('kpiGold').textContent=fmt(goldDisb);
+  document.getElementById('kpiGoldSub').textContent=gold.filter(l=>l.status==='Active').length+' active';
+  document.getElementById('kpiVehicle').textContent=fmt(vehicleDisb);
+  document.getElementById('kpiVehicleSub').textContent=vehicle.filter(l=>l.status==='Active').length+' active';
+  document.getElementById('kpiApps').textContent=u.applications.length;
+  document.getElementById('kpiCusts').textContent=custs.length;
+  document.getElementById('kpiCustsSub').textContent=(custs.length>=10&&!u.subscribed)?'Limit reached':'Active customers';
+
+  // Due list
+  const dueEl=document.getElementById('dashDueList');
+  if(!active.length){dueEl.innerHTML='<div style="font-size:13px;color:var(--muted);padding:12px 0">No active loans.</div>';return;}
+  dueEl.innerHTML=active.slice(0,4).map(l=>`<div class="due-row"><div style="display:flex;align-items:center;gap:8px">${custAvEl(cn(l.custId))}<div><div style="font-weight:600;font-size:13px">${cn(l.custId)}</div><div style="font-size:11px;color:var(--muted)">${l.id} · ${l.type}</div></div></div><div style="text-align:right"><div style="font-weight:600">${fmt(emiCalc(l.amount,l.rate,l.tenure))}</div><div style="font-size:11px;color:#BA7517">Due today</div></div></div>`).join('');
+
+  // Apps list
+  const appEl=document.getElementById('dashAppList');
+  if(!u.applications.length){appEl.innerHTML='<div style="font-size:13px;color:var(--muted);padding:12px 0">No pending applications.</div>';return;}
+  appEl.innerHTML=u.applications.map(a=>`<div class="due-row"><div><div style="font-weight:600;font-size:13px">${cn(a.custId)}</div><div style="font-size:11px;color:var(--muted)">${a.id} · ${a.type} · ${fmt(a.amount)}</div></div><span class="badge b-pending">${a.stage}</span></div>`).join('');
+
+  // Overdue list
+  const ovEl=document.getElementById('dashOverdueList');
+  if(!overdue.length){ovEl.innerHTML='<div style="font-size:13px;color:var(--muted);padding:10px 0">No overdue accounts.</div>';return;}
+  const days=[32,18,45,22,60];
+  ovEl.innerHTML='<table><thead><tr><th>Customer</th><th>Loan</th><th>Type</th><th>Overdue Amt</th><th>Days Late</th><th>Action</th></tr></thead><tbody>'+
+  overdue.map((l,i)=>{const e=emiCalc(l.amount,l.rate,l.tenure);return`<tr><td><div class="av-cell">${custAvEl(cn(l.custId))}<span>${cn(l.custId)}</span></div></td><td style="color:var(--amber)">${l.id}</td><td><span class="badge ${l.type==='Gold'?'b-gold':'b-vehicle'}">${l.type}</span></td><td style="color:var(--red);font-weight:600">${fmt(e*1.5)}</td><td><span class="badge b-overdue">${days[i%5]}d</span></td><td><button class="btn btn-sm" onclick="smsAlert('${cn(l.custId)}')">SMS</button></td></tr>`;}).join('')+'</tbody></table>';
+
+  // Charts
+  setTimeout(()=>initUserCharts(),100);
+
+  // Update badges
+  document.getElementById('kycBadge').textContent=custs.filter(c=>c.kyc==='Pending').length;
+  document.getElementById('appBadge').textContent=u.applications.length;
+  document.getElementById('emiDueBadge').textContent=active.length;
+  document.getElementById('overdueBadge').textContent=overdue.length;
+}
+
+let portChartInst=null, colChartInst=null;
+function initUserCharts(){
+  const portCtx=document.getElementById('portChart');
+  if(!portCtx)return;
+  const loans=currentUser.loans;
+  const gT=loans.filter(l=>l.type==='Gold').reduce((s,l)=>s+l.amount,0);
+  const vT=loans.filter(l=>l.type==='Vehicle').reduce((s,l)=>s+l.amount,0);
+  document.getElementById('portLegend').innerHTML=`<span style="display:flex;align-items:center;gap:4px"><span style="width:9px;height:9px;border-radius:2px;background:#BA7517"></span>Gold</span><span style="display:flex;align-items:center;gap:4px"><span style="width:9px;height:9px;border-radius:2px;background:#378ADD"></span>Vehicle</span>`;
+  if(portChartInst)portChartInst.destroy();
+  portChartInst=new Chart(portCtx,{type:'doughnut',data:{labels:['Gold','Vehicle'],datasets:[{data:[gT||1,vT||0],backgroundColor:['#BA7517','#378ADD'],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}});
+  const colCtx=document.getElementById('colChart');
+  document.getElementById('colLegend').innerHTML=`<span style="display:flex;align-items:center;gap:4px"><span style="width:9px;height:9px;border-radius:2px;background:#BA7517"></span>Collected</span><span style="display:flex;align-items:center;gap:4px"><span style="width:9px;height:9px;border-radius:2px;background:#d0cec5"></span>Expected</span>`;
+  if(colChartInst)colChartInst.destroy();
+  colChartInst=new Chart(colCtx,{type:'bar',data:{labels:['Oct','Nov','Dec','Jan','Feb','Mar'],datasets:[{label:'Collected',data:[68000,85000,102000,79000,118000,95000],backgroundColor:'#BA7517',borderRadius:3},{label:'Expected',data:[90000,90000,105000,95000,120000,115000],backgroundColor:'#e5e2d8',borderRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{ticks:{callback:v=>'₹'+(v/1000)+'K',font:{size:10}}},x:{grid:{display:false},ticks:{font:{size:10}}}}}});
+}
+
+// ============================================================
+// USER: CUSTOMERS
+// ============================================================
+function renderCusts(){
+  const u=currentUser;
+  const limitReached=u.customers.length>=10 && !u.subscribed;
+  document.getElementById('custLimitWarn').style.display=limitReached?'flex':'none';
+  document.getElementById('addCustBtn').disabled=limitReached;
+
+  const lc=id=>u.loans.filter(l=>l.custId===id&&l.status!=='Closed').length;
+  const os=id=>u.loans.filter(l=>l.custId===id&&l.status!=='Closed').reduce((s,l)=>s+emiCalc(l.amount,l.rate,l.tenure)*(l.tenure-l.paid),0);
+  const list=u.customers.filter(c=>{
+    const q=custFilter.toLowerCase();
+    return(!q||c.name.toLowerCase().includes(q)||c.phone.includes(q))&&(!custKycFilter||c.kyc===custKycFilter);
+  });
+  document.getElementById('custTbody').innerHTML=list.map((c,i)=>`<tr>
+    <td><div class="av-cell">${avEl(c.name,28,i)}<div><div class="av-name">${c.name}</div><div class="av-sub">${c.id}</div></div></div></td>
+    <td>${c.phone}</td>
+    <td><span class="badge ${c.kyc==='Verified'?'b-active':'b-pending'}">${c.kyc}</span></td>
+    <td style="font-size:12px">${c.aadhaar}</td>
+    <td>${lc(c.id)}</td>
+    <td>${fmt(os(c.id))}</td>
+    <td><button class="btn btn-sm" onclick="viewCustLoans('${c.id}')">Loans</button></td>
+  </tr>`).join('');
+}
+function filterCust(q){custFilter=q||'';renderCusts();}
+function filterCustKyc(v){custKycFilter=v||'';renderCusts();}
+function viewCustLoans(id){navTo('loans',null);filterLoanSearch(cn(id));}
+function openAddCust(){
+  if(currentUser.customers.length>=10 && !currentUser.subscribed){openSubModal();return;}
+  document.getElementById('mAddCust').classList.add('open');
+}
+function saveCustomer(){
+  const name=document.getElementById('ac-name').value.trim();
+  const phone=document.getElementById('ac-phone').value.trim();
+  if(!name||!phone){alert('Name & phone required');return;}
+  const newC={id:'C'+String(currentUser.customers.length+1).padStart(2,'0'),name,phone,
+    aadhaar:document.getElementById('ac-aadhaar').value||'XXXX-XXXX',
+    pan:document.getElementById('ac-pan').value||'—',
+    addr:document.getElementById('ac-addr').value||'—',
+    kyc:document.getElementById('ac-kyc').value,
+    type:document.getElementById('ac-type').value};
+  currentUser.customers.push(newC);
+  closeM('mAddCust');
+  renderCusts();
+  document.getElementById('kycBadge').textContent=currentUser.customers.filter(c=>c.kyc==='Pending').length;
+  document.getElementById('kpiCusts').textContent=currentUser.customers.length;
+}
+
+// ============================================================
+// USER: KYC
+// ============================================================
+function renderKYC(){
+  const pending=currentUser.customers.filter(c=>c.kyc==='Pending');
+  document.getElementById('kycBadge').textContent=pending.length;
+  const alEl=document.getElementById('kycAlertBanner');
+  if(!pending.length){alEl.style.display='none';}
+  else{alEl.style.display='flex';alEl.textContent=pending.length+' customer(s) awaiting KYC verification.';}
+  document.getElementById('kycTbody').innerHTML=pending.map(c=>`<tr>
+    <td><div class="av-cell">${custAvEl(c.name,26)}<div><div class="av-name">${c.name}</div><div class="av-sub">${c.phone}</div></div></div></td>
+    <td style="font-size:12px;color:var(--muted)">Today</td>
+    <td><span class="badge b-pending">Aadhaar · PAN</span></td>
+    <td style="font-size:12px">${c.aadhaar}</td>
+    <td style="font-size:12px">${c.pan||'—'}</td>
+    <td><span class="badge b-pending">Pending</span></td>
+    <td style="display:flex;gap:4px;padding:8px">
+      <button class="btn btn-sm btn-green" onclick="verifyKYC('${c.id}',this)">Verify</button>
+      <button class="btn btn-sm btn-red" onclick="rejectKYC('${c.id}',this)">Reject</button>
+    </td>
+  </tr>`).join('');
+}
+function verifyKYC(id,btn){
+  const c=currentUser.customers.find(x=>x.id===id);if(!c)return;
+  c.kyc='Verified';
+  const row=btn.closest('tr');
+  const badges=row.querySelectorAll('.badge');
+  badges[badges.length-1].textContent='Verified';badges[badges.length-1].className='badge b-active';
+  btn.parentElement.innerHTML='<span style="font-size:12px;color:var(--green);font-weight:600">✓ Verified</span>';
+  document.getElementById('kycBadge').textContent=currentUser.customers.filter(c=>c.kyc==='Pending').length;
+}
+function rejectKYC(id,btn){
+  const row=btn.closest('tr');const badges=row.querySelectorAll('.badge');
+  badges[badges.length-1].textContent='Rejected';badges[badges.length-1].className='badge b-overdue';
+  btn.parentElement.innerHTML='<span style="font-size:12px;color:var(--red);font-weight:600">✗ Rejected</span>';
+}
+
+// ============================================================
+// USER: APPLICATIONS
+// ============================================================
+function renderApps(){
+  const apps=currentUser.applications;
+  document.getElementById('appBadge').textContent=apps.length;
+  const alEl=document.getElementById('appAlertBanner');
+  if(!apps.length){alEl.style.display='none';}
+  else{alEl.style.display='flex';alEl.textContent=apps.length+' application(s) pending review.';}
+  document.getElementById('appTbody').innerHTML=apps.map(a=>`<tr>
+    <td style="font-weight:600;color:var(--amber)">${a.id}</td>
+    <td><div class="av-cell">${custAvEl(cn(a.custId))}<span>${cn(a.custId)}</span></div></td>
+    <td><span class="badge ${a.type==='Gold'?'b-gold':'b-vehicle'}">${a.type}</span></td>
+    <td style="font-weight:600">${fmt(a.amount)}</td>
+    <td style="font-size:12px;color:var(--muted)">${a.asset}</td>
+    <td><span class="badge b-pending">${a.stage}</span></td>
+    <td><button class="btn btn-sm btn-amber" onclick="openApproveModal('${a.id}')">Review</button></td>
+  </tr>`).join('');
+}
+function openApproveModal(appId){
+  currentAppId=appId;
+  const a=currentUser.applications.find(x=>x.id===appId);if(!a)return;
+  const c=currentUser.customers.find(x=>x.id===a.custId);
+  document.getElementById('apprTitle').textContent='Review — '+a.id;
+  const stages=[
+    {label:'KYC Verification',meta:c?.kyc==='Verified'?'KYC verified':'KYC pending',done:c?.kyc==='Verified'},
+    {label:'Document Check',meta:'Application & asset docs received',done:true},
+    {label:'Asset Valuation',meta:a.type==='Gold'?'Gold appraised at market rate':'Vehicle RC & insurance verified',done:true},
+    {label:'Credit Assessment',meta:'No active defaults',done:a.stage!=='Credit Check'},
+    {label:'Manager Approval',meta:'Pending final sign-off',done:false,active:true},
+  ];
+  document.getElementById('apprStages').innerHTML=stages.map(s=>`<div class="appr-stage"><div class="appr-dot ${s.done?'dot-done':s.active?'dot-active':'dot-wait'}">${s.done?'<svg width="9" height="9" viewBox="0 0 9 9" fill="none"><path d="M1.5 4.5l2 2 4-4" stroke="#3B6D11" stroke-width="1.5" stroke-linecap="round"/></svg>':s.active?'<svg width="9" height="9" viewBox="0 0 9 9" fill="none"><circle cx="4.5" cy="4.5" r="3" fill="#BA7517"/></svg>':'<svg width="9" height="9" viewBox="0 0 9 9" fill="none"><circle cx="4.5" cy="4.5" r="3" fill="#aaa"/></svg>'}</div><div><div class="appr-name">${s.label}</div><div style="font-size:11px;color:var(--muted);margin-top:2px">${s.meta}</div></div></div>`).join('');
+  document.getElementById('mApprove').classList.add('open');
+}
+function approveApp(){
+  if(!currentAppId)return;
+  const a=currentUser.applications.find(x=>x.id===currentAppId);if(!a)return;
+  const e=emiCalc(a.amount,a.rate,a.tenure);
+  const prefix=a.type==='Gold'?'GL':'VL';
+  currentUser.loans.unshift({id:prefix+String(Date.now()).slice(-4),custId:a.custId,type:a.type,amount:a.amount,rate:a.rate,tenure:a.tenure,disbDate:today(),paid:0,status:'Active',asset:a.asset});
+  currentUser.applications=currentUser.applications.filter(x=>x.id!==currentAppId);
+  closeM('mApprove');renderApps();renderUserDash();
+  document.getElementById('appBadge').textContent=currentUser.applications.length;
+  alert('Loan approved & disbursed!\nMonthly EMI: '+fmt(e));
+}
+function rejectApp(){
+  if(!currentAppId)return;
+  currentUser.applications=currentUser.applications.filter(x=>x.id!==currentAppId);
+  closeM('mApprove');renderApps();
+  document.getElementById('appBadge').textContent=currentUser.applications.length;
+}
+
+// ============================================================
+// USER: LOANS
+// ============================================================
+function filterLoanSearch(v){lSearchFilter=(v||'').toLowerCase();renderLoans();}
+function filterLoanType(v){lTypeFilter=v||'';renderLoans();}
+function filterLoanStatus(v){lStatusFilter=v||'';renderLoans();}
+function renderLoans(){
+  const list=currentUser.loans.filter(l=>{
+    const nm=cn(l.custId).toLowerCase();
+    return(!lSearchFilter||nm.includes(lSearchFilter)||l.id.toLowerCase().includes(lSearchFilter))&&(!lTypeFilter||l.type===lTypeFilter)&&(!lStatusFilter||l.status===lStatusFilter);
+  });
+  document.getElementById('loansTbody').innerHTML=list.map(l=>{
+    const e=emiCalc(l.amount,l.rate,l.tenure);
+    const pct=Math.round(l.paid/l.tenure*100);
+    return`<tr>
+      <td style="font-weight:600;color:var(--amber);cursor:pointer" onclick="viewLoan('${l.id}')">${l.id}</td>
+      <td><div class="av-cell">${custAvEl(cn(l.custId))}<span>${cn(l.custId)}</span></div></td>
+      <td><span class="badge ${l.type==='Gold'?'b-gold':'b-vehicle'}">${l.type}</span></td>
+      <td style="font-weight:600">${fmt(l.amount)}</td>
+      <td>${fmt(e)}</td>
+      <td><div style="font-size:11px;font-weight:600;margin-bottom:3px">${pct}% (${l.paid}/${l.tenure})</div><div class="prog-bg"><div class="prog-fill ${l.status==='Overdue'?'prog-red':''}" style="width:${pct}%"></div></div></td>
+      <td style="font-size:12px">${l.status==='Closed'?'—':'Apr 5, 2025'}</td>
+      <td><span class="badge b-${l.status.toLowerCase()}">${l.status}</span></td>
+      <td><button class="btn btn-sm" onclick="viewLoan('${l.id}')">Details</button></td>
+    </tr>`;
+  }).join('');
+}
+function viewLoan(id){
+  const l=currentUser.loans.find(x=>x.id===id);if(!l)return;
+  const e=emiCalc(l.amount,l.rate,l.tenure);const totInt=e*l.tenure-l.amount;
+  let rows='';for(let i=1;i<=l.tenure;i++){const int=e*l.rate/12/100;const prin=e-int;const bal=Math.max(0,l.amount-prin*i);rows+=`<tr><td style="padding-left:10px">${i}</td><td>${fmt(e)}</td><td>${fmt(int)}</td><td>${fmt(prin)}</td><td>${fmt(bal)}</td><td><span class="badge ${i<=l.paid?'b-active':'b-pending'}">${i<=l.paid?'Paid':'Due'}</span></td></tr>`;}
+  document.getElementById('ldTitle').textContent=l.id+' — '+cn(l.custId);
+  document.getElementById('ldBody').innerHTML=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">${[['Principal',fmt(l.amount)],['Rate',l.rate+'% p.a.'],['Monthly EMI',fmt(e)],['Tenure',l.tenure+' months'],['Total Interest',fmt(totInt)],['EMIs Paid',l.paid+'/'+l.tenure]].map(([k,v])=>`<div style="background:var(--bg);border-radius:8px;padding:10px 12px"><div style="font-size:10px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">${k}</div><div style="font-size:15px;font-weight:600">${v}</div></div>`).join('')}</div><div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Asset</div><div style="font-size:13px;margin-bottom:14px;padding:8px 12px;background:var(--bg);border-radius:8px">${l.asset}</div><div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Repayment Schedule</div><div class="emi-scroll"><table><thead><tr><th style="padding-left:10px">#</th><th>EMI</th><th>Interest</th><th>Principal</th><th>Balance</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+  document.getElementById('mLoanDetail').classList.add('open');
+}
+
+// ============================================================
+// USER: EMI TRACKER
+// ============================================================
+function renderEMI(){
+  const active=currentUser.loans.filter(l=>l.status==='Active');
+  document.getElementById('emiDueBadge').textContent=active.length;
+  const total=active.reduce((s,l)=>s+emiCalc(l.amount,l.rate,l.tenure),0);
+  const alEl=document.getElementById('emiAlert');
+  alEl.className='alert alert-amber';
+  alEl.innerHTML=`<svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6.5" cy="6.5" r="6"/><path d="M6.5 3v3.5l2 1.5"/></svg>${active.length} EMIs due today totalling ${fmt(total)}`;
+  document.getElementById('emiTbody').innerHTML=active.map(l=>`<tr>
+    <td><div class="av-cell">${custAvEl(cn(l.custId),24)}<span>${cn(l.custId)}</span></div></td>
+    <td style="color:var(--amber)">${l.id}</td>
+    <td><span class="badge ${l.type==='Gold'?'b-gold':'b-vehicle'}">${l.type}</span></td>
+    <td style="font-weight:600">${fmt(emiCalc(l.amount,l.rate,l.tenure))}</td>
+    <td>Apr 5, 2025</td>
+    <td>${l.paid+1}/${l.tenure}</td>
+    <td><span class="badge b-pending">Pending</span></td>
+    <td><button class="btn btn-sm btn-green" onclick="markPaid(this,'${l.id}')">Mark Paid</button></td>
+  </tr>`).join('');
+}
+function markPaid(btn,id){
+  const l=currentUser.loans.find(x=>x.id===id);if(l)l.paid++;
+  btn.textContent='Paid ✓';btn.disabled=true;btn.style.background='var(--green)';btn.style.borderColor='var(--green)';
+  const badges=btn.closest('tr').querySelectorAll('.badge');badges[badges.length-1].className='badge b-active';badges[badges.length-1].textContent='Paid';
+}
+
+// ============================================================
+// USER: OVERDUE
+// ============================================================
+function renderOverdue(){
+  const ov=currentUser.loans.filter(l=>l.status==='Overdue');
+  document.getElementById('overdueBadge').textContent=ov.length;
+  const alEl=document.getElementById('overdueAlert');
+  alEl.className='alert alert-red';
+  alEl.innerHTML=`<svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6.5 1L.5 12.5h12L6.5 1z"/><path d="M6.5 5v3M6.5 9.5v.8"/></svg>${ov.length} customers with overdue payments totalling ${fmt(ov.reduce((s,l)=>s+emiCalc(l.amount,l.rate,l.tenure)*1.5,0))}`;
+  const days=[32,18,45,22,60];
+  document.getElementById('overdueTbody').innerHTML=ov.map((l,i)=>{
+    const c=currentUser.customers.find(x=>x.id===l.custId);
+    return`<tr>
+      <td><div class="av-cell">${custAvEl(c?.name||'?',24)}<div><div class="av-name">${c?.name||'—'}</div><div class="av-sub">${l.custId}</div></div></div></td>
+      <td style="color:var(--amber)">${l.id}</td>
+      <td><span class="badge ${l.type==='Gold'?'b-gold':'b-vehicle'}">${l.type}</span></td>
+      <td style="color:var(--red);font-weight:600">${fmt(emiCalc(l.amount,l.rate,l.tenure)*1.5)}</td>
+      <td><span class="badge b-overdue">${days[i%5]}d</span></td>
+      <td style="font-size:12px;color:var(--muted)">${l.asset.split('·')[0].trim()}</td>
+      <td>${c?.phone||'—'}</td>
+      <td style="display:flex;gap:4px;padding:8px"><button class="btn btn-sm" onclick="smsAlert('${c?.name||'Customer'}')">SMS</button><button class="btn btn-sm" onclick="alert('Calling...')">Call</button></td>
+    </tr>`;
+  }).join('');
+}
+
+function smsAlert(name){alert('SMS reminder sent to '+name);}
+
+// ============================================================
+// USER: SUBSCRIPTION PAGE
+// ============================================================
+function renderSubPage(){
+  const u=currentUser;
+  document.getElementById('subPlanName').textContent=planLabel(u);
+  let statusText='';
+  if(u.subscribed){
+    if(u.subExpiry){
+      const d=Math.ceil((u.subExpiry-Date.now())/86400000);
+      statusText=`Renews in ${d} days (${u.subPlan==='monthly'?'₹20/month':'₹150/year'})`;
+    }
+  } else {
+    const dl=daysLeft(u);
+    statusText=dl>0?`${dl} days remaining in free trial`:'Trial expired — please subscribe';
+  }
+  document.getElementById('subStatus').textContent=statusText;
+  document.getElementById('subCustLimit').textContent=`Up to 10 customers (you have ${u.customers.length})`;
+}
+
+// ============================================================
+// SUBSCRIPTION MODAL
+// ============================================================
+function openSubModal(){
+  document.getElementById('subModal').classList.add('open');
+  if(document.getElementById('expiredOverlay').classList.contains('show')){
+    // keep expired overlay but show sub modal on top
+  }
+}
+function closeSubModal(){document.getElementById('subModal').classList.remove('open');}
+function selectSubPlan(p){
+  selectedSubPlan=p;
+  ['subMonthly','subYearly'].forEach(id=>document.getElementById(id).classList.remove('active'));
+  document.getElementById(p==='monthly'?'subMonthly':'subYearly').classList.add('active');
+}
+function confirmUpgrade(){
+  if(!currentUser)return;
+  const expiry=selectedSubPlan==='monthly'?Date.now()+30*86400000:Date.now()+365*86400000;
+  currentUser.subscribed=true;
+  currentUser.subPlan=selectedSubPlan;
+  currentUser.subExpiry=expiry;
+  closeSubModal();
+  document.getElementById('expiredOverlay').classList.remove('show');
+  setupTrialBanner();
+  renderSubPage();
+  alert('Subscription activated! Enjoy VaultFinance.\n'+(selectedSubPlan==='monthly'?'₹20/month':'₹150/year'));
+}
+
+// ============================================================
+// NEW APPLICATION
+// ============================================================
+function openNewApp(){
+  const custs=currentUser.customers;
+  if(!custs.length){alert('Add at least one customer first.');return;}
+  document.getElementById('na-cust').innerHTML=custs.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
+  document.getElementById('na-date').value=today();
+  document.getElementById('mNewApp').classList.add('open');
+}
+function toggleAssetFields(){
+  const t=document.getElementById('na-type').value;
+  document.getElementById('goldFields').style.display=t==='Gold'?'grid':'none';
+  document.getElementById('vehicleFields').style.display=t==='Vehicle'?'grid':'none';
+  document.getElementById('assetLabel').textContent=t+' Asset Details';
+}
+function calcAppEMI(){
+  const p=parseFloat(document.getElementById('na-amount').value),r=parseFloat(document.getElementById('na-rate').value),n=parseInt(document.getElementById('na-tenure').value);
+  const prev=document.getElementById('emiPrev');
+  if(!p||!r||!n){prev.style.display='none';return;}
+  const e=emiCalc(p,r,n);
+  document.getElementById('app-emi').textContent=fmt(e);
+  document.getElementById('app-int').textContent=fmt(e*n-p);
+  document.getElementById('app-total').textContent=fmt(e*n);
+  prev.style.display='block';
+}
+function calcLTV(){
+  const mv=parseFloat(document.getElementById('na-gold-val').value)||0;
+  const p=parseFloat(document.getElementById('na-amount').value)||0;
+  if(mv>0&&p>0)document.getElementById('na-ltv').value=Math.round(p/mv*100)+'% LTV';
+}
+function submitApp(){
+  const custId=document.getElementById('na-cust').value;
+  const type=document.getElementById('na-type').value;
+  const amount=parseFloat(document.getElementById('na-amount').value);
+  const rate=parseFloat(document.getElementById('na-rate').value);
+  const tenure=parseInt(document.getElementById('na-tenure').value);
+  if(!amount||!rate||!tenure){alert('Please fill all loan fields.');return;}
+  const asset=type==='Gold'
+    ?(document.getElementById('na-gold-wt').value+'g '+document.getElementById('na-gold-purity').value+' Gold')
+    :(document.getElementById('na-vmodel').value||'Vehicle')+' '+(document.getElementById('na-vyear').value||'');
+  currentUser.applications.push({id:'APP'+String(Date.now()).slice(-4),custId,type,amount,rate,tenure,asset,stage:'KYC Check'});
+  closeM('mNewApp');
+  document.getElementById('appBadge').textContent=currentUser.applications.length;
+  if(document.getElementById('page-applications').classList.contains('active'))renderApps();
+  renderUserDash();
+  alert('Application submitted for review!');
+}
+
+// ============================================================
+// ADMIN: DASHBOARD
+// ============================================================
+function renderAdminDash(){
+  const finUsers=DB.users.filter(u=>u.role!=='admin');
+  const totalCusts=finUsers.reduce((s,u)=>s+u.customers.length,0);
+  const totalLoans=finUsers.reduce((s,u)=>s+u.loans.length,0);
+  const subs=finUsers.filter(u=>u.subscribed).length;
+  const trials=finUsers.filter(u=>!u.subscribed&&daysLeft(u)>0).length;
+  const expired=finUsers.filter(u=>isExpired(u)&&!u.subscribed).length;
+
+  document.getElementById('aKpiUsers').textContent=finUsers.length;
+  document.getElementById('aKpiSubs').textContent=subs;
+  document.getElementById('aKpiTrial').textContent=trials;
+  document.getElementById('aKpiCusts').textContent=totalCusts;
+  document.getElementById('aKpiLoans').textContent=totalLoans;
+  document.getElementById('aKpiExpired').textContent=expired;
+  document.getElementById('adminUserBadge').textContent=finUsers.length;
+
+  document.getElementById('adminRecentUsers').innerHTML=finUsers.slice(-5).reverse().map((u,i)=>`
+    <div class="admin-user-card">
+      <div class="admin-user-av" style="background:${AV_BG[i%AV_BG.length]};color:${AV_TX[i%AV_TX.length]}">${ini(u.name)}</div>
+      <div class="admin-user-info">
+        <div class="admin-user-name">${u.name}</div>
+        <div class="admin-user-meta">${u.company} · ${u.email}</div>
+        <div style="margin-top:4px">${planBadge(u)}</div>
+      </div>
+      <div class="admin-user-stats">
+        <div class="admin-stat"><div class="admin-stat-val">${u.customers.length}</div><div class="admin-stat-label">Customers</div></div>
+        <div class="admin-stat"><div class="admin-stat-val">${u.loans.length}</div><div class="admin-stat-label">Loans</div></div>
+      </div>
+      <button class="btn btn-sm" onclick="viewAdminUser('${u.id}')" style="margin-left:10px">View</button>
+    </div>`).join('');
+}
+
+// ============================================================
+// ADMIN: USERS LIST
+// ============================================================
+function renderAdminUsers(){
+  const finUsers=DB.users.filter(u=>u.role!=='admin');
+  const filtered=finUsers.filter(u=>{
+    const q=adminUserFilter.toLowerCase();
+    const matchQ=!q||u.name.toLowerCase().includes(q)||u.company.toLowerCase().includes(q)||u.email.toLowerCase().includes(q);
+    const st=adminUserStatusFilter;
+    const matchSt=!st||(st==='trial'&&!u.subscribed&&daysLeft(u)>0)||(st==='subscribed'&&u.subscribed)||(st==='expired'&&isExpired(u));
+    return matchQ&&matchSt;
+  });
+  document.getElementById('adminUsersList').innerHTML=filtered.map((u,i)=>`
+    <div class="admin-user-card">
+      <div class="admin-user-av" style="background:${AV_BG[i%AV_BG.length]};color:${AV_TX[i%AV_TX.length]}">${ini(u.name)}</div>
+      <div class="admin-user-info">
+        <div class="admin-user-name">${u.name} <span style="font-size:11px;color:var(--muted);font-weight:400">· ${u.company}</span></div>
+        <div class="admin-user-meta">${u.email} · ${u.phone||'No phone'}</div>
+        <div style="margin-top:5px;display:flex;gap:8px;align-items:center">${planBadge(u)}<span style="font-size:11px;color:var(--muted)">${u.customers.length} customers · ${u.loans.length} loans</span></div>
+      </div>
+      <div style="display:flex;gap:6px">
+        <button class="btn btn-sm" onclick="viewAdminUser('${u.id}')">View Details</button>
+        <button class="btn btn-sm" onclick="adminToggleSub('${u.id}',this)">${u.subscribed?'Revoke Sub':'Grant Sub'}</button>
+        <button class="btn btn-sm btn-red" onclick="adminDeleteUser('${u.id}')">Delete</button>
+      </div>
+    </div>`).join('') || '<div style="padding:20px;text-align:center;color:var(--muted);font-size:13px">No users found.</div>';
+}
+function filterAdminUsers(q){adminUserFilter=q||'';renderAdminUsers();}
+function filterAdminUserStatus(v){adminUserStatusFilter=v||'';renderAdminUsers();}
+
+function viewAdminUser(uid){
+  const u=DB.users.find(x=>x.id===uid);if(!u)return;
+  document.getElementById('adminUserDetailTitle').textContent=u.name+' — '+u.company;
+  const overdue=u.loans.filter(l=>l.status==='Overdue');
+  const totalDisb=u.loans.reduce((s,l)=>s+l.amount,0);
+  document.getElementById('adminUserDetailBody').innerHTML=`
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px">
+      ${[['Email',u.email],['Phone',u.phone||'—'],['Plan',planLabel(u)],['Customers',u.customers.length],['Total Loans',u.loans.length],['Total Disbursed',fmt(totalDisb)]].map(([k,v])=>`<div style="background:var(--bg);border-radius:8px;padding:10px 12px"><div style="font-size:10px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">${k}</div><div style="font-size:14px;font-weight:600">${v}</div></div>`).join('')}
+    </div>
+    <div style="margin-bottom:14px">
+      <div style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Customers (${u.customers.length})</div>
+      ${!u.customers.length?'<div style="font-size:13px;color:var(--muted)">No customers added.</div>':
+      '<table><thead><tr><th>Name</th><th>Phone</th><th>KYC</th><th>Outstanding</th></tr></thead><tbody>'+
+      u.customers.map(c=>{
+        const os=u.loans.filter(l=>l.custId===c.id&&l.status!=='Closed').reduce((s,l)=>s+emiCalc(l.amount,l.rate,l.tenure)*(l.tenure-l.paid),0);
+        return`<tr><td><div class="av-cell">${avEl(c.name,22,0)}<span>${c.name}</span></div></td><td>${c.phone}</td><td><span class="badge ${c.kyc==='Verified'?'b-active':'b-pending'}">${c.kyc}</span></td><td>${fmt(os)}</td></tr>`;
+      }).join('')+'</tbody></table>'}
+    </div>
+    <div>
+      <div style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Loans (${u.loans.length})</div>
+      ${!u.loans.length?'<div style="font-size:13px;color:var(--muted)">No loans.</div>':
+      '<table><thead><tr><th>Loan ID</th><th>Customer</th><th>Type</th><th>Amount</th><th>Status</th></tr></thead><tbody>'+
+      u.loans.map(l=>{const cname=u.customers.find(c=>c.id===l.custId)?.name||'—';return`<tr><td style="color:var(--amber)">${l.id}</td><td>${cname}</td><td><span class="badge ${l.type==='Gold'?'b-gold':'b-vehicle'}">${l.type}</span></td><td>${fmt(l.amount)}</td><td><span class="badge b-${l.status.toLowerCase()}">${l.status}</span></td></tr>`;}).join('')+'</tbody></table>'}
+    </div>`;
+  document.getElementById('adminUserDetailFoot').innerHTML=`
+    <button class="btn" onclick="closeM('mAdminUserDetail')">Close</button>
+    <button class="btn ${u.subscribed?'btn-red':'btn-green'}" onclick="adminToggleSub('${u.id}',null);closeM('mAdminUserDetail');renderAdminUsers();">${u.subscribed?'Revoke Subscription':'Grant Subscription'}</button>`;
+  document.getElementById('mAdminUserDetail').classList.add('open');
+}
+
+function adminToggleSub(uid,btn){
+  const u=DB.users.find(x=>x.id===uid);if(!u)return;
+  u.subscribed=!u.subscribed;
+  if(u.subscribed){u.subPlan='monthly';u.subExpiry=Date.now()+30*86400000;}
+  else{u.subPlan=null;u.subExpiry=null;}
+  if(btn){btn.textContent=u.subscribed?'Revoke Sub':'Grant Sub';}
+  renderAdminUsers();
+}
+
+function adminDeleteUser(uid){
+  if(!confirm('Are you sure you want to delete this user and all their data?'))return;
+  DB.users=DB.users.filter(u=>u.id!==uid);
+  renderAdminUsers();
+  renderAdminDash();
+}
+
+// ============================================================
+// ADMIN: SUBSCRIPTIONS TABLE
+// ============================================================
+function renderAdminSubs(){
+  const finUsers=DB.users.filter(u=>u.role!=='admin');
+  document.getElementById('adminSubsTbody').innerHTML=finUsers.map(u=>`<tr>
+    <td><div class="av-cell">${avEl(u.name,24,0)}<div><div style="font-weight:600">${u.name}</div><div style="font-size:11px;color:var(--muted)">${u.email}</div></div></div></td>
+    <td>${u.company}</td>
+    <td style="font-weight:600">${u.subscribed?(u.subPlan==='monthly'?'₹20/mo':'₹150/yr'):'Free Trial'}</td>
+    <td>${planBadge(u)}</td>
+    <td>${u.customers.length}/10</td>
+    <td style="font-size:12px;color:var(--muted)">${new Date(u.trialStart||Date.now()).toLocaleDateString('en-IN')}</td>
+    <td style="font-size:12px">${u.subExpiry?new Date(u.subExpiry).toLocaleDateString('en-IN'):daysLeft(u)>0?'Trial: '+daysLeft(u)+'d left':'Expired'}</td>
+    <td style="display:flex;gap:4px;padding:8px">
+      <button class="btn btn-sm" onclick="viewAdminUser('${u.id}')">View</button>
+      <button class="btn btn-sm ${u.subscribed?'btn-red':'btn-green'}" onclick="adminToggleSub('${u.id}',this)">${u.subscribed?'Revoke':'Grant'}</button>
+    </td>
+  </tr>`).join('');
+}
+
+// ============================================================
+// ADMIN: ALL LOANS
+// ============================================================
+function renderAdminLoans(){
+  const finUsers=DB.users.filter(u=>u.role!=='admin');
+  let rows='';
+  finUsers.forEach(u=>{
+    u.loans.forEach(l=>{
+      const cname=u.customers.find(c=>c.id===l.custId)?.name||'—';
+      rows+=`<tr>
+        <td><div class="av-cell">${avEl(u.name,22,0)}<div><div style="font-weight:600">${u.name}</div><div style="font-size:11px;color:var(--muted)">${u.company}</div></div></div></td>
+        <td style="color:var(--amber)">${l.id}</td>
+        <td>${cname}</td>
+        <td><span class="badge ${l.type==='Gold'?'b-gold':'b-vehicle'}">${l.type}</span></td>
+        <td style="font-weight:600">${fmt(l.amount)}</td>
+        <td><span class="badge b-${l.status.toLowerCase()}">${l.status}</span></td>
+      </tr>`;
+    });
+  });
+  document.getElementById('adminLoansTbody').innerHTML=rows||'<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--muted)">No loans yet.</td></tr>';
+}
+
+// ============================================================
+// UTILS
+// ============================================================
+function closeM(id){document.getElementById(id).classList.remove('open');}
+</script>
+</body>
+</html>
