@@ -30,18 +30,18 @@ export async function createSubscriptionOrder(req: Request, res: Response): Prom
 
   const { amount, currency, description } = PLANS[plan];
 
-  // In production, use Razorpay SDK:
-  // const Razorpay = require('razorpay');
-  // const rzp = new Razorpay({ key_id: process.env.RAZORPAY_KEY_ID, key_secret: process.env.RAZORPAY_KEY_SECRET });
-  // const order = await rzp.orders.create({ amount, currency, receipt: `sub_${userId}_${Date.now()}`, notes: { userId, plan } });
+  const Razorpay = require('razorpay');
+  const rzp = new Razorpay({
+    key_id: process.env.RAZORPAY_KEY_ID,
+    key_secret: process.env.RAZORPAY_KEY_SECRET,
+  });
 
-  // Stub response for now:
-  const order = {
-    id: `order_${crypto.randomBytes(10).toString('hex')}`,
+  const order = await rzp.orders.create({
     amount,
     currency,
     receipt: `sub_${userId}_${Date.now()}`,
-  };
+    notes: { userId, plan },
+  });
 
   res.json({
     success: true,

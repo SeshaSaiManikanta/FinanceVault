@@ -94,6 +94,17 @@ export default function LoginPage() {
               Create one free
             </Link>
           </p>
+          
+          <div className="mt-4 flex gap-2 text-xs text-center">
+            <Link href="/forgot-password" className="flex-1 text-blue-600 hover:underline">
+              Forgot Password?
+            </Link>
+            <div className="text-gray-300">•</div>
+            <Link href="/forgot-pin" className="flex-1 text-blue-600 hover:underline">
+              Forgot PIN?
+            </Link>
+          </div>
+          
           <p className="text-center text-xs text-gray-400 mt-3">
             Demo: demo@sriramnance.com / Demo@123!
           </p>

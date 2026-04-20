@@ -4,6 +4,7 @@
 import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import { z } from 'zod';
+import crypto from 'crypto';
 import { prisma } from '../utils/prisma';
 import {
   generateAccessToken,
@@ -17,6 +18,8 @@ import {
 } from '../utils/jwt';
 import { AppError } from '../middleware/errorHandler';
 import { createAuditLog } from '../services/auditService';
+import { sendEmail, generatePasswordResetEmail, generatePINResetEmail } from '../services/emailService';
+import { sendPasswordResetSMS, sendPINResetSMS } from '../services/smsService';
 import { logger } from '../utils/logger';
 import { hashPin } from '../utils/encryption';
 
@@ -57,6 +60,27 @@ const changePasswordSchema = z.object({
     .string()
     .min(8)
     .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])/),
+});
+
+const forgotPasswordSchema = z.object({
+  email: z.string().email().toLowerCase(),
+});
+
+const resetPasswordSchema = z.object({
+  token: z.string().min(1),
+  newPassword: z
+    .string()
+    .min(8)
+    .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])/),
+});
+
+const forgotPinSchema = z.object({
+  email: z.string().email().toLowerCase(),
+});
+
+const resetPinSchema = z.object({
+  token: z.string().min(1),
+  newPin: z.string().regex(/^\d{4}$/, 'PIN must be exactly 4 digits'),
 });
 
 // ─────────────────────────────────────────────
@@ -388,4 +412,217 @@ export async function changePassword(req: Request, res: Response): Promise<void>
   );
 
   res.json({ success: true, message: 'Password changed. Please log in again.' });
+}
+
+// ─────────────────────────────────────────────
+// FORGOT PASSWORD
+// ─────────────────────────────────────────────
+export async function forgotPassword(req: Request, res: Response): Promise<void> {
+  const { email } = forgotPasswordSchema.parse(req.body);
+
+  const user = await prisma.user.findUnique({
+    where: { email },
+    select: { id: true, name: true, email: true, phone: true },
+  });
+
+  // Always return success for security (avoid user enumeration)
+  if (!user) {
+    res.json({
+      success: true,
+      message: 'If an account exists, a reset link has been sent to the email.',
+    });
+    return;
+  }
+
+  // Generate token and expiry (1 hour)
+  const resetToken = crypto.randomBytes(32).toString('hex');
+  const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
+
+  await prisma.user.update({
+    where: { id: user.id },
+    data: {
+      passwordResetToken: resetToken,
+      passwordResetExpiresAt: expiresAt,
+    },
+  });
+
+  // Send email
+  const resetLink = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-password/${resetToken}`;
+  const emailHTML = generatePasswordResetEmail(user.name, resetLink);
+  await sendEmail({
+    to: user.email,
+    subject: 'Password Reset Request',
+    html: emailHTML,
+  });
+
+  // Send SMS if phone available
+  if (user.phone) {
+    await sendPasswordResetSMS(user.phone, user.name, resetLink);
+  }
+
+  await createAuditLog(
+    user.id,
+    'PASSWORD_RESET_REQUESTED',
+    undefined,
+    undefined,
+    `Password reset requested for ${user.email}`,
+    'MEDIUM',
+    req,
+  );
+
+  res.json({
+    success: true,
+    message: 'If an account exists, a reset link has been sent to the email.',
+  });
+}
+
+// ─────────────────────────────────────────────
+// RESET PASSWORD
+// ─────────────────────────────────────────────
+export async function resetPassword(req: Request, res: Response): Promise<void> {
+  const { token, newPassword } = resetPasswordSchema.parse(req.body);
+
+  const user = await prisma.user.findFirst({
+    where: {
+      passwordResetToken: token,
+      passwordResetExpiresAt: { gt: new Date() },
+    },
+    select: { id: true, email: true },
+  });
+
+  if (!user) {
+    throw new AppError('Invalid or expired reset token', 400, 'INVALID_TOKEN');
+  }
+
+  // Hash new password
+  const newHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
+
+  await prisma.user.update({
+    where: { id: user.id },
+    data: {
+      passwordHash: newHash,
+      passwordResetToken: null,
+      passwordResetExpiresAt: null,
+    },
+  });
+
+  // Revoke all tokens (force re-login)
+  await revokeAllUserTokens(user.id);
+
+  await createAuditLog(
+    user.id,
+    'PASSWORD_RESET_COMPLETED',
+    undefined,
+    undefined,
+    'Password reset completed — all sessions invalidated',
+    'HIGH',
+    req,
+  );
+
+  res.json({ success: true, message: 'Password reset successful. Please log in with your new password.' });
+}
+
+// ─────────────────────────────────────────────
+// FORGOT SECURITY PIN
+// ─────────────────────────────────────────────
+export async function forgotPin(req: Request, res: Response): Promise<void> {
+  const { email } = forgotPinSchema.parse(req.body);
+
+  const user = await prisma.user.findUnique({
+    where: { email },
+    select: { id: true, name: true, email: true, phone: true, securityPinHash: true },
+  });
+
+  // Always return success for security
+  if (!user || !user.securityPinHash) {
+    res.json({
+      success: true,
+      message: 'If an account with a PIN exists, a reset link has been sent.',
+    });
+    return;
+  }
+
+  // Generate token and expiry (1 hour)
+  const resetToken = crypto.randomBytes(32).toString('hex');
+  const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
+
+  await prisma.user.update({
+    where: { id: user.id },
+    data: {
+      pinResetToken: resetToken,
+      pinResetExpiresAt: expiresAt,
+    },
+  });
+
+  // Send email
+  const resetLink = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-pin/${resetToken}`;
+  const emailHTML = generatePINResetEmail(user.name, resetLink);
+  await sendEmail({
+    to: user.email,
+    subject: 'Security PIN Reset Request',
+    html: emailHTML,
+  });
+
+  // Send SMS if phone available
+  if (user.phone) {
+    await sendPINResetSMS(user.phone, user.name, resetLink);
+  }
+
+  await createAuditLog(
+    user.id,
+    'PIN_RESET_REQUESTED',
+    undefined,
+    undefined,
+    `PIN reset requested for ${user.email}`,
+    'MEDIUM',
+    req,
+  );
+
+  res.json({
+    success: true,
+    message: 'If an account with a PIN exists, a reset link has been sent.',
+  });
+}
+
+// ─────────────────────────────────────────────
+// RESET SECURITY PIN
+// ─────────────────────────────────────────────
+export async function resetPin(req: Request, res: Response): Promise<void> {
+  const { token, newPin } = resetPinSchema.parse(req.body);
+
+  const user = await prisma.user.findFirst({
+    where: {
+      pinResetToken: token,
+      pinResetExpiresAt: { gt: new Date() },
+    },
+    select: { id: true, email: true },
+  });
+
+  if (!user) {
+    throw new AppError('Invalid or expired reset token', 400, 'INVALID_TOKEN');
+  }
+
+  // Hash new PIN
+  const pinData = await hashPin(newPin);
+
+  await prisma.user.update({
+    where: { id: user.id },
+    data: {
+      securityPinHash: `${pinData.hash}:${pinData.salt}`,
+      pinResetToken: null,
+      pinResetExpiresAt: null,
+    },
+  });
+
+  await createAuditLog(
+    user.id,
+    'PIN_RESET_COMPLETED',
+    undefined,
+    undefined,
+    'Security PIN reset completed',
+    'MEDIUM',
+    req,
+  );
+
+  res.json({ success: true, message: 'PIN reset successful.' });
 }

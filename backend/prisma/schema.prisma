@@ -29,6 +29,12 @@ model User {
   lastLoginAt     DateTime?
   lastLoginIp     String?
   
+  // Password & PIN Reset
+  passwordResetToken String?
+  passwordResetExpiresAt DateTime?
+  pinResetToken      String?
+  pinResetExpiresAt  DateTime?
+  
   // Subscription
   plan            PlanType  @default(TRIAL)
   trialStartedAt  DateTime  @default(now())

@@ -11,6 +11,10 @@ import {
   refresh,
   getMe,
   changePassword,
+  forgotPassword,
+  resetPassword,
+  forgotPin,
+  resetPin,
 } from '../controllers/authController';
 
 const router = Router();
@@ -45,5 +49,11 @@ router.post('/logout', authenticate, logout);
 router.post('/refresh', refresh);
 router.get('/me', authenticate, requireActiveUser, getMe);
 router.put('/change-password', authenticate, requireActiveUser, changePassword);
+
+// Password & PIN Reset Routes (public, rate-limited)
+router.post('/forgot-password', authLimiter, forgotPassword);
+router.post('/reset-password', authLimiter, resetPassword);
+router.post('/forgot-pin', authLimiter, forgotPin);
+router.post('/reset-pin', authLimiter, resetPin);
 
 export default router;
