@@ -18,6 +18,8 @@ const icons: Record<string, JSX.Element> = {
   shield: <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M7 1L1.5 3.5v4C1.5 11 4 13.5 7 13.5s5.5-2.5 5.5-6v-4L7 1z"/></svg>,
   subscription: <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="7" cy="7" r="6"/><path d="M7 3.5v3.5l2 1.5"/></svg>,
   logout: <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M5.5 7h6M9 4.5L11.5 7 9 9.5"/><path d="M7.5 2H2.5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h5"/></svg>,
+  moon: <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M11 7c0-2.5-2-4.5-4.5-4.5-1.5 0-2.8.8-3.5 2-1.5 2.5.3 5.5 3 5.5 2.2 0 4-1.8 4-4z"/></svg>,
+  sun: <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="7" cy="7" r="3"/><path d="M7 1V.5M7 13v.5M1 7H.5M13.5 7H13M2.5 2.5l-.4-.4M11.9 11.9l.4.4M11.9 2.5l.4-.4M2.5 11.9l-.4.4"/></svg>,
 };
 
 const userNav = [
@@ -73,7 +75,7 @@ const avTx = ['#633806', '#0C447C', '#27500A', '#72243E', '#26215C'];
 export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, clearAuth } = useAuthStore();
+  const { user, clearAuth, darkMode, toggleDarkMode } = useAuthStore();
   const isAdmin = user?.role === 'ADMIN';
   const nav = isAdmin ? adminNav : userNav;
   const idx = user ? (user.email.charCodeAt(0) % avBg.length) : 0;
@@ -109,9 +111,18 @@ export default function Sidebar() {
           <p className="text-xs font-semibold text-gray-900 truncate">{user?.name}</p>
           <p className="text-[10px] text-gray-400 truncate">{isAdmin ? 'Super Admin' : user?.companyName}</p>
         </div>
-        <button onClick={handleLogout} title="Sign out" className="text-gray-400 hover:text-gray-700 p-1 rounded">
-          {icons.logout}
-        </button>
+        <div className="flex items-center gap-1">
+          <button 
+            onClick={toggleDarkMode} 
+            title={darkMode ? 'Light mode' : 'Dark mode'} 
+            className="text-gray-400 hover:text-gray-700 p-1 rounded"
+          >
+            {darkMode ? icons.sun : icons.moon}
+          </button>
+          <button onClick={handleLogout} title="Sign out" className="text-gray-400 hover:text-gray-700 p-1 rounded">
+            {icons.logout}
+          </button>
+        </div>
       </div>
 
       {/* Nav */}

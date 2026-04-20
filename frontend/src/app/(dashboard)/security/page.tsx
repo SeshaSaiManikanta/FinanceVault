@@ -72,6 +72,15 @@ export default function SecurityPage() {
             {pinMsg && <p className={`text-xs text-center ${pinMsg.includes('success') ? 'text-green-700' : 'text-red-700'}`}>{pinMsg}</p>}
           </form>
 
+          <div className="mt-4 pt-3 border-t border-gray-100">
+            <a href="/forgot-pin" className="inline-flex items-center gap-1.5 text-sm text-blue-600 hover:text-blue-700 font-medium">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <path d="M7 1c-3.5 0-6 2.5-6 5.5 0 1.5.5 2.5 1.5 3.5-.5 1.5-2 2-2 2s1.5-.5 3-1c.5 0 1 .5 2.5.5 3.5 0 6-2.5 6-6C13 3.5 10.5 1 7 1z"/>
+              </svg>
+              Forgot PIN?
+            </a>
+          </div>
+
           <div className="mt-5 pt-4 border-t border-gray-100">
             <h4 className="text-sm font-semibold mb-2">Security Summary</h4>
             <div className="space-y-2 text-sm">

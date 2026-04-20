@@ -14,7 +14,7 @@ const schema = z.object({
   email: z.string().email('Invalid email'),
   password: z.string().min(8).regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])/, 'Must include uppercase, lowercase, number & special char'),
   phone: z.string().regex(/^[6-9]\d{9}$/, 'Valid 10-digit Indian mobile').optional().or(z.literal('')),
-  securityPin: z.string().regex(/^\d{4}$/, '4 digits required'),
+  securityPin: z.string().regex(/^\d{4}$/, '4 digits required').optional().or(z.literal('')),
   plan: z.enum(['TRIAL', 'MONTHLY', 'YEARLY']),
 });
 type FormData = z.infer<typeof schema>;

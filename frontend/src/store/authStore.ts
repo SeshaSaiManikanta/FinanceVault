@@ -22,10 +22,12 @@ interface AuthState {
   accessToken: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  darkMode: boolean;
   setAuth: (user: AuthUser, token: string) => void;
   clearAuth: () => void;
   setLoading: (v: boolean) => void;
   updateUser: (updates: Partial<AuthUser>) => void;
+  toggleDarkMode: () => void;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -35,6 +37,7 @@ export const useAuthStore = create<AuthState>()(
       accessToken: null,
       isAuthenticated: false,
       isLoading: true,
+      darkMode: false,
       setAuth: (user, accessToken) =>
         set({ user, accessToken, isAuthenticated: true, isLoading: false }),
       clearAuth: () =>
@@ -42,10 +45,12 @@ export const useAuthStore = create<AuthState>()(
       setLoading: (isLoading) => set({ isLoading }),
       updateUser: (updates) =>
         set((s) => ({ user: s.user ? { ...s.user, ...updates } : null })),
+      toggleDarkMode: () =>
+        set((s) => ({ darkMode: !s.darkMode })),
     }),
     {
       name: 'vf-auth',
-      partialize: (s) => ({ user: s.user, accessToken: s.accessToken, isAuthenticated: s.isAuthenticated }),
+      partialize: (s) => ({ user: s.user, accessToken: s.accessToken, isAuthenticated: s.isAuthenticated, darkMode: s.darkMode }),
     },
   ),
 );

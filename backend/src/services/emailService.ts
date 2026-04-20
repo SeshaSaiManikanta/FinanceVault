@@ -4,7 +4,11 @@
 import { Resend } from 'resend';
 import { logger } from '../utils/logger';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Initialize Resend only if API key is available
+let resend: Resend | null = null;
+if (process.env.RESEND_API_KEY) {
+  resend = new Resend(process.env.RESEND_API_KEY);
+}
 
 interface EmailOptions {
   to: string;
@@ -15,6 +19,11 @@ interface EmailOptions {
 
 export async function sendEmail(options: EmailOptions): Promise<boolean> {
   try {
+    if (!resend) {
+      logger.warn('Resend API key not configured. Email not sent:', options.to);
+      return false;
+    }
+
     const response = await resend.emails.send({
       from: options.from || process.env.EMAIL_FROM || 'noreply@vaultfinance.com',
       to: options.to,

@@ -49,16 +49,16 @@
   .badge {
     @apply inline-block px-2 py-0.5 rounded-full text-xs font-semibold;
   }
-  .badge-active    { @apply bg-green-50 text-green-800; }
-  .badge-overdue   { @apply bg-red-50 text-red-800; }
-  .badge-closed    { @apply bg-gray-100 text-gray-600; }
-  .badge-pending   { @apply bg-amber-50 text-amber-800; }
-  .badge-gold      { @apply bg-yellow-100 text-yellow-900; }
-  .badge-vehicle   { @apply bg-blue-50 text-blue-900; }
-  .badge-personal  { @apply bg-purple-50 text-purple-900; }
-  .badge-property  { @apply bg-teal-50 text-teal-900; }
-  .badge-business  { @apply bg-orange-50 text-orange-900; }
-  .badge-verified  { @apply bg-green-50 text-green-800; }
+  .badge-active    { @apply bg-green-50 text-green-800 dark:bg-green-900 dark:text-green-200; }
+  .badge-overdue   { @apply bg-red-50 text-red-800 dark:bg-red-900 dark:text-red-200; }
+  .badge-closed    { @apply bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300; }
+  .badge-pending   { @apply bg-amber-50 text-amber-800 dark:bg-amber-900 dark:text-amber-200; }
+  .badge-gold      { @apply bg-yellow-100 text-yellow-900 dark:bg-yellow-900 dark:text-yellow-200; }
+  .badge-vehicle   { @apply bg-blue-50 text-blue-900 dark:bg-blue-900 dark:text-blue-200; }
+  .badge-personal  { @apply bg-purple-50 text-purple-900 dark:bg-purple-900 dark:text-purple-200; }
+  .badge-property  { @apply bg-teal-50 text-teal-900 dark:bg-teal-900 dark:text-teal-200; }
+  .badge-business  { @apply bg-orange-50 text-orange-900 dark:bg-orange-900 dark:text-orange-200; }
+  .badge-verified  { @apply bg-green-50 text-green-800 dark:bg-green-900 dark:text-green-200; }
   .nav-item {
     @apply flex items-center gap-2 px-3 py-2 text-sm text-gray-500 rounded-lg border-l-2 border-transparent cursor-pointer transition-all;
   }
