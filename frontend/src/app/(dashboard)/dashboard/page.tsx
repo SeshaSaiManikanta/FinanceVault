@@ -1,14 +1,17 @@
 'use client';
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { dashboardApi } from '@/lib/api';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 import { useRouter } from 'next/navigation';
+import LoanDetailsModal from '@/components/LoanDetailsModal';
 
 function fmt(n: number) { return '₹' + Math.round(n).toLocaleString('en-IN'); }
 function fmtK(n: number) { return n >= 100000 ? '₹' + (n / 100000).toFixed(1) + 'L' : fmt(n); }
 
 export default function DashboardPage() {
   const router = useRouter();
+  const [selectedLoanId, setSelectedLoanId] = useState<string | null>(null);
   const { data, isLoading } = useQuery({
     queryKey: ['dashboard'],
     queryFn: () => dashboardApi.summary().then(r => r.data.data),
@@ -49,11 +52,11 @@ export default function DashboardPage() {
       {/* KPIs */}
       <div className="grid grid-cols-4 gap-3">
         {kpiCards.map(k => (
-          <div key={k.label} className="kpi-card">
-            <div className="absolute right-3 top-3 w-8 h-8 rounded-lg flex items-center justify-center text-lg" style={{ background: k.color }}>{k.icon}</div>
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">{k.label}</p>
-            <p className={`text-2xl font-semibold ${k.danger ? 'text-red-700' : k.warn ? 'text-amber-700' : 'text-gray-900'}`}>{k.value}</p>
-            <p className="text-xs text-gray-400 mt-1">{k.sub}</p>
+          <div key={k.label} className="card relative p-4 dark:bg-gray-800">
+            <div className="absolute right-3 top-3 w-8 h-8 rounded-lg flex items-center justify-center text-lg opacity-70" style={{ background: k.color }}>{k.icon}</div>
+            <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">{k.label}</p>
+            <p className={`text-2xl font-semibold ${k.danger ? 'text-red-700 dark:text-red-400' : k.warn ? 'text-amber-700 dark:text-amber-400' : 'text-gray-900 dark:text-gray-100'}`}>{k.value}</p>
+            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{k.sub}</p>
           </div>
         ))}
       </div>
@@ -76,7 +79,7 @@ export default function DashboardPage() {
         {/* Due today */}
         <div className="card col-span-2">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="card-title text-sm font-semibold">EMI Due Today</h3>
+            <h3 className="text-sm font-semibold">EMI Due Today</h3>
             <button onClick={() => router.push('/emi')} className="text-xs text-amber-600 hover:underline">View all</button>
           </div>
           {dueToday.length === 0 ? (
@@ -84,14 +87,14 @@ export default function DashboardPage() {
           ) : (
             <div className="space-y-2">
               {dueToday.slice(0, 5).map((d: any) => (
-                <div key={d.repaymentId} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
+                <div key={d.repaymentId} className="flex items-center justify-between py-2 border-b border-gray-50 dark:border-gray-700 last:border-0">
                   <div>
-                    <p className="text-sm font-semibold">{d.customerName}</p>
-                    <p className="text-xs text-gray-400">{d.loanNumber} · {d.loanType?.icon} {d.loanType?.name}</p>
+                    <p className="text-sm font-semibold dark:text-gray-100">{d.customerName}</p>
+                    <p className="text-xs text-gray-400 dark:text-gray-500">{d.loanNumber} · {d.loanType?.icon} {d.loanType?.name}</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm font-semibold">{fmt(d.amount)}</p>
-                    <p className="text-xs text-amber-600">Due today</p>
+                    <p className="text-sm font-semibold dark:text-gray-100">{fmt(d.amount)}</p>
+                    <p className="text-xs text-amber-600 dark:text-amber-400">Due today</p>
                   </div>
                 </div>
               ))}
@@ -110,8 +113,8 @@ export default function DashboardPage() {
               { label: 'Overdue Accounts', value: kpis.overdueCount || 0, danger: true },
             ].map(s => (
               <div key={s.label} className="flex justify-between items-center text-sm">
-                <span className="text-gray-500">{s.label}</span>
-                <span className={`font-semibold ${s.danger ? 'text-red-700' : s.warn && s.value > 0 ? 'text-amber-700' : 'text-gray-900'}`}>{s.value}</span>
+                <span className="text-gray-500 dark:text-gray-400">{s.label}</span>
+                <span className={`font-semibold ${s.danger ? 'text-red-700 dark:text-red-400' : s.warn && s.value > 0 ? 'text-amber-700 dark:text-amber-400' : 'text-gray-900 dark:text-gray-100'}`}>{s.value}</span>
               </div>
             ))}
           </div>
@@ -172,8 +175,8 @@ export default function DashboardPage() {
             </tr></thead>
             <tbody>
               {recentLoans.map((l: any) => (
-                <tr key={l.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => router.push(`/loans?id=${l.id}`)}>
-                  <td className="table-td font-mono text-xs text-amber-700">{l.loanNumber}</td>
+                <tr key={l.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
+                  <td className="table-td font-mono text-xs text-amber-700 dark:text-amber-400 cursor-pointer hover:underline font-semibold" onClick={() => setSelectedLoanId(l.id)}>{l.loanNumber}</td>
                   <td className="table-td font-medium">{l.customer?.name}</td>
                   <td className="table-td"><span className={`badge badge-${l.loanType?.slug}`}>{l.loanType?.icon} {l.loanType?.name}</span></td>
                   <td className="table-td font-medium">{fmt(l.principalAmount)}</td>
@@ -184,6 +187,8 @@ export default function DashboardPage() {
           </table>
         )}
       </div>
+
+      <LoanDetailsModal isOpen={!!selectedLoanId} loanId={selectedLoanId || ''} onClose={() => setSelectedLoanId(null)} />
     </div>
   );
 }

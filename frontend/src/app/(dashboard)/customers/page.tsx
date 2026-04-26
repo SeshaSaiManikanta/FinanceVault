@@ -1,5 +1,6 @@
 'use client';
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { customersApi } from '@/lib/api';
 import { useForm } from 'react-hook-form';
@@ -21,6 +22,7 @@ const schema = z.object({
 type FormData = z.infer<typeof schema>;
 
 export default function CustomersPage() {
+  const router = useRouter();
   const qc = useQueryClient();
   const [search, setSearch] = useState('');
   const [kycFilter, setKycFilter] = useState('');
@@ -80,10 +82,10 @@ export default function CustomersPage() {
       {/* Header */}
       <div className="flex items-center gap-3">
         <div className="relative flex-1 max-w-xs">
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search name or phone..." className="input pl-8" />
-          <svg className="absolute left-2.5 top-2.5 text-gray-400" width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="5.5" cy="5.5" r="4"/><path d="M9 9l2.5 2.5"/></svg>
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search name or phone..." className="input pl-8 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-700" />
+          <svg className="absolute left-2.5 top-2.5 text-gray-400 dark:text-gray-600" width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="5.5" cy="5.5" r="4"/><path d="M9 9l2.5 2.5"/></svg>
         </div>
-        <select value={kycFilter} onChange={e => setKycFilter(e.target.value)} className="input w-auto">
+        <select value={kycFilter} onChange={e => setKycFilter(e.target.value)} className="input w-auto dark:bg-gray-800 dark:text-gray-100 dark:border-gray-700">
           <option value="">All KYC</option>
           <option value="VERIFIED">Verified</option>
           <option value="PENDING">Pending</option>
@@ -95,42 +97,50 @@ export default function CustomersPage() {
       {/* Table */}
       <div className="card p-0 overflow-hidden">
         <table className="w-full">
-          <thead className="bg-gray-50">
+          <thead className="bg-gray-50 dark:bg-gray-800">
             <tr>
-              {['Customer', 'Phone', 'KYC', 'Aadhaar', 'PAN', 'Loans', 'Action'].map(h => (
+              {['Customer', 'Phone', 'KYC', 'Loans', 'Outstanding', 'Aadhaar', 'PAN', 'Actions'].map(h => (
                 <th key={h} className="table-th">{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {isLoading ? (
-              <tr><td colSpan={7} className="table-td text-center text-gray-400 py-8">Loading...</td></tr>
+              <tr><td colSpan={8} className="table-td text-center text-gray-400 py-8">Loading...</td></tr>
             ) : customers.length === 0 ? (
-              <tr><td colSpan={7} className="table-td text-center text-gray-400 py-8">No customers found. Add your first customer!</td></tr>
+              <tr><td colSpan={8} className="table-td text-center text-gray-400 py-8">No customers found. Add your first customer!</td></tr>
             ) : customers.map((c: any) => {
               const revealed = revealData[c.id];
+              const outstandingAmount = c.loans?.reduce((sum: number, loan: any) => {
+                if (['ACTIVE', 'OVERDUE'].includes(loan.status)) {
+                  return sum + (loan.principalAmount - loan.paidAmount);
+                }
+                return sum;
+              }, 0) || 0;
               return (
-                <tr key={c.id} className="hover:bg-gray-50">
+                <tr key={c.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
                   <td className="table-td">
                     <div>
                       <p className="font-semibold text-sm">{c.name}</p>
-                      <p className="text-xs text-gray-400">{c.customerType}</p>
+                      <p className="text-xs text-gray-400 dark:text-gray-500">{c.customerType}</p>
                     </div>
                   </td>
                   <td className="table-td text-sm">{c.phone}</td>
                   <td className="table-td">
                     <span className={`badge badge-${c.kycStatus === 'VERIFIED' ? 'verified' : 'pending'}`}>{c.kycStatus}</span>
                     {c.kycStatus === 'PENDING' && (
-                      <button onClick={() => kycMutation.mutate({ id: c.id, status: 'VERIFIED' })} className="ml-2 text-xs text-green-700 hover:underline">Verify</button>
+                      <button onClick={() => kycMutation.mutate({ id: c.id, status: 'VERIFIED' })} className="ml-2 text-xs text-green-700 dark:text-green-400 hover:underline">Verify</button>
                     )}
                   </td>
+                  <td className="table-td text-sm font-semibold">{c._count?.loans || 0}</td>
+                  <td className="table-td text-sm font-semibold text-amber-700 dark:text-amber-400">{fmt(outstandingAmount)}</td>
                   <td className="table-td font-mono text-xs">{revealed?.aadhaar || '••••-••••-????'}</td>
                   <td className="table-td font-mono text-xs">{revealed?.pan || '••••••••••'}</td>
-                  <td className="table-td text-sm">{c._count?.loans || 0}</td>
-                  <td className="table-td">
+                  <td className="table-td space-x-1 flex">
                     <button onClick={() => handleReveal(c.id)} className="btn btn-sm text-xs">
-                      {revealed ? '🔒 Hide' : '🔓 View'}
+                      {revealed ? '🔒' : '🔓'}
                     </button>
+                    <button onClick={() => router.push(`/loans?customerId=${c.id}`)} className="btn btn-sm btn-amber text-xs">Loans</button>
                   </td>
                 </tr>
               );
@@ -141,13 +151,13 @@ export default function CustomersPage() {
 
       {/* PIN Modal */}
       {pinState.open && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
-          <div className="bg-white rounded-2xl p-7 w-72 text-center shadow-2xl">
-            <div className="w-12 h-12 bg-amber-50 rounded-full flex items-center justify-center mx-auto mb-3">
+        <div className="fixed inset-0 bg-black/50 dark:bg-black/70 z-50 flex items-center justify-center">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl p-7 w-72 text-center shadow-2xl">
+            <div className="w-12 h-12 bg-amber-50 dark:bg-amber-900/30 rounded-full flex items-center justify-center mx-auto mb-3">
               <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#BA7517" strokeWidth="1.5"><path d="M10 1L2 4.5v5C2 14.5 5.5 18.5 10 19.5c4.5-1 8-5 8-10v-5L10 1z"/></svg>
             </div>
-            <h3 className="font-semibold mb-1">Security PIN Required</h3>
-            <p className="text-xs text-gray-400 mb-4">Enter your 4-digit PIN to view Aadhaar & PAN</p>
+            <h3 className="font-semibold mb-1 dark:text-gray-100">Security PIN Required</h3>
+            <p className="text-xs text-gray-400 dark:text-gray-500 mb-4">Enter your 4-digit PIN to view Aadhaar & PAN</p>
             {/* PIN dots */}
             <div className="flex gap-2 justify-center mb-4">
               {[0,1,2,3].map(i => (
@@ -180,11 +190,11 @@ export default function CustomersPage() {
 
       {/* Add Customer Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-              <h3 className="font-semibold">Add New Customer</h3>
-              <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-700 text-xl">×</button>
+        <div className="fixed inset-0 bg-black/50 dark:bg-black/70 z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
+              <h3 className="font-semibold dark:text-gray-100">Add New Customer</h3>
+              <button onClick={() => setShowModal(false)} className="text-gray-400 dark:text-gray-600 hover:text-gray-700 dark:hover:text-gray-400 text-xl">×</button>
             </div>
             <div className="px-6 py-5">
               {error && <div className="alert-red mb-3 text-sm">{error}</div>}
